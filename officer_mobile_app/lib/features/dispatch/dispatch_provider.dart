@@ -39,6 +39,7 @@ class DispatchPollingNotifier extends StateNotifier<OfficerStatus> {
   DispatchPollingNotifier(this.ref) : super(Offline());
 
   Future<void> goOnline() async {
+    await _getLocation(); // Throws if location access is denied
     state = Online();
     _timer = Timer.periodic(const Duration(seconds: 3), _tick);
     await _tick(_timer!);
@@ -179,25 +180,25 @@ class DispatchPollingNotifier extends StateNotifier<OfficerStatus> {
   Future<Position> _getLocation() async {
     bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
-      return Position(longitude: 80.0850, latitude: 12.8785, timestamp: DateTime.now(), accuracy: 1, altitude: 1, heading: 1, speed: 1, speedAccuracy: 1, altitudeAccuracy: 1, headingAccuracy: 1); // Mock location
+      throw Exception('Location services are disabled.');
     }
 
     LocationPermission permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
       permission = await Geolocator.requestPermission();
       if (permission == LocationPermission.denied) {
-        return Position(longitude: 80.0850, latitude: 12.8785, timestamp: DateTime.now(), accuracy: 1, altitude: 1, heading: 1, speed: 1, speedAccuracy: 1, altitudeAccuracy: 1, headingAccuracy: 1); // Mock
+        throw Exception('Location permission denied.');
       }
     }
     
     if (permission == LocationPermission.deniedForever) {
-      return Position(longitude: 80.0850, latitude: 12.8785, timestamp: DateTime.now(), accuracy: 1, altitude: 1, heading: 1, speed: 1, speedAccuracy: 1, altitudeAccuracy: 1, headingAccuracy: 1); // Mock
+      throw Exception('Location permissions permanently denied.');
     }
 
     try {
       return await Geolocator.getCurrentPosition();
     } catch (e) {
-      return Position(longitude: 80.0850, latitude: 12.8785, timestamp: DateTime.now(), accuracy: 1, altitude: 1, heading: 1, speed: 1, speedAccuracy: 1, altitudeAccuracy: 1, headingAccuracy: 1); // Mock fallback
+      throw Exception('Could not get live location.');
     }
   }
 

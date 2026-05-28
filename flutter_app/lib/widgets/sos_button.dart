@@ -129,13 +129,29 @@ class _SOSButtonState extends State<SOSButton> with SingleTickerProviderStateMix
     HapticFeedback.heavyImpact();
     setState(() => _activated = true);
 
-    setState(() => _activated = true);
-
     final loc = context.read<LocationService>();
     final api = context.read<ApiService>();
 
-    final lat = loc.currentPosition?.latitude ?? 12.8406;
-    final lng = loc.currentPosition?.longitude ?? 80.1534;
+    if (loc.currentPosition == null) {
+      bool granted = await loc.requestPermission();
+      if (granted) {
+        await loc.getCurrentLocation();
+      }
+      if (loc.currentPosition == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Location access is required to send an SOS alert.'), backgroundColor: Colors.red),
+          );
+        }
+        setState(() => _swipeProgress = 0.0);
+        return;
+      }
+    }
+
+    setState(() => _activated = true);
+
+    final lat = loc.currentPosition!.latitude;
+    final lng = loc.currentPosition!.longitude;
 
     final result = await api.sendSOSAlert(
       latitude: lat,

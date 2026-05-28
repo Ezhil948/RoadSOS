@@ -98,7 +98,7 @@ class _LoginScreenState extends State<LoginScreen>
     
     try {
       final response = await http.post(
-        Uri.parse('${ApiEndpoints.baseUrl}/api/v1/auth/login'),
+        Uri.parse('${ApiEndpoints.baseUrl}/auth/login'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({
           'badge_number': _badgeController.text.trim(),
@@ -346,7 +346,7 @@ class _LoginScreenState extends State<LoginScreen>
                                   controller: _badgeController,
                                   hint: 'Enter badge number',
                                   icon: Icons.badge_rounded,
-                                  keyboardType: TextInputType.number,
+                                  keyboardType: TextInputType.text,
                                 ),
 
                                 const SizedBox(height: 20),

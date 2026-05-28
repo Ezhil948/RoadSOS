@@ -60,15 +60,21 @@ class _AccidentReportScreenState extends State<AccidentReportScreen> {
     if (loc.currentPosition == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Getting your location...')));
-      await loc.getCurrentLocation();
+      bool granted = await loc.requestPermission();
+      if (granted) {
+        await loc.getCurrentLocation();
+      }
       if (loc.currentPosition == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Location unavailable. Using VIT Chennai.')));
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Location is required to report an accident.'), backgroundColor: Colors.red));
+        }
+        return;
       }
     }
 
-    final lat = loc.currentPosition?.latitude ?? 12.8406;
-    final lng = loc.currentPosition?.longitude ?? 80.1534;
+    final lat = loc.currentPosition!.latitude;
+    final lng = loc.currentPosition!.longitude;
 
     setState(() => _submitting = true);
     final api = context.read<ApiService>();

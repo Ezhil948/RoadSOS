@@ -84,9 +84,28 @@ class HomeScreen extends ConsumerWidget {
                 Switch(
                   value: isOnline,
                   activeColor: kAccentGreen,
-                  onChanged: (val) {
+                  onChanged: (val) async {
                     if (val) {
-                      ref.read(dispatchProvider.notifier).goOnline();
+                      try {
+                        await ref.read(dispatchProvider.notifier).goOnline();
+                      } catch (e) {
+                        if (context.mounted) {
+                          final msg = e.toString().replaceAll('Exception: ', '');
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(msg),
+                              backgroundColor: kAccentRed,
+                              action: msg.contains('permanently denied') || msg.contains('permission') 
+                                ? SnackBarAction(
+                                    label: 'SETTINGS',
+                                    textColor: Colors.white,
+                                    onPressed: () => Geolocator.openAppSettings(),
+                                  )
+                                : null,
+                            ),
+                          );
+                        }
+                      }
                     } else {
                       ref.read(dispatchProvider.notifier).goOffline();
                     }

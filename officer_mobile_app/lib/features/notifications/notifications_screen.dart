@@ -31,7 +31,7 @@ class _NotificationsScreenState extends ConsumerState<NotificationsScreen> {
   Future<void> _fetchLogs() async {
     try {
       final dio = ref.read(dioProvider);
-      final res = await dio.get('${ApiEndpoints.baseUrl}/api/v1/logs/recent');
+      final res = await dio.get('${ApiEndpoints.baseUrl}/logs/recent');
       final List logs = res.data['logs'] ?? [];
       
       setState(() {

@@ -40,6 +40,10 @@ class _MainMapScreenState extends ConsumerState<MainMapScreen> with SingleTicker
 
   void _initLocationTracking() async {
     try {
+      final permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        await Geolocator.requestPermission();
+      }
       final pos = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
       if (mounted) {
         setState(() {
@@ -48,9 +52,7 @@ class _MainMapScreenState extends ConsumerState<MainMapScreen> with SingleTicker
       }
     } catch (_) {
       if (mounted) {
-        setState(() {
-          _officerPosition = const LatLng(12.8785, 80.0850); // Default Vandalur Zoo
-        });
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Location unavailable. Map will not load until permission granted.')));
       }
     }
 

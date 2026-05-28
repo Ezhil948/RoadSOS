@@ -54,12 +54,11 @@ class LocationService extends ChangeNotifier {
       notifyListeners();
       return _currentPosition;
     } catch (e) {
-      // Fallback to last known position for offline
-      _currentPosition = await Geolocator.getLastKnownPosition();
-      _error = 'Using last known location';
+      _currentPosition = null;
+      _error = 'Could not get live location';
       _isLoading = false;
       notifyListeners();
-      return _currentPosition;
+      return null;
     }
   }
 

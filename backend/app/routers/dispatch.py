@@ -122,18 +122,28 @@ async def _find_and_assign_officers(alert_id: int, db: AsyncSession):
     if not alert:
         return {"status": "error", "message": "Alert not found"}
 
-    # Bounding box pre-filter approximation (optimization)
-    lat_min, lat_max = alert.latitude - 0.5, alert.latitude + 0.5
-    lng_min, lng_max = alert.longitude - 0.5, alert.longitude + 0.5
+    # Expanding bounding box search: start at ~55km (0.5 deg) up to ~880km (8.0 deg)
+    officers = []
+    radius_deg = 0.5
+    max_radius_deg = 8.0
     
-    result_off = await db.execute(
-        select(Officer).where(
-            Officer.status == "available",
-            Officer.latitude.between(lat_min, lat_max),
-            Officer.longitude.between(lng_min, lng_max)
+    while radius_deg <= max_radius_deg:
+        lat_min, lat_max = alert.latitude - radius_deg, alert.latitude + radius_deg
+        lng_min, lng_max = alert.longitude - radius_deg, alert.longitude + radius_deg
+        
+        result_off = await db.execute(
+            select(Officer).where(
+                Officer.status == "available",
+                Officer.latitude.between(lat_min, lat_max),
+                Officer.longitude.between(lng_min, lng_max)
+            )
         )
-    )
-    officers = result_off.scalars().all()
+        officers = result_off.scalars().all()
+        
+        if officers:
+            break
+            
+        radius_deg += 0.5
     
     if not officers:
         return {"status": "no_officers"}

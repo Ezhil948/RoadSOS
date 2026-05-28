@@ -67,6 +67,10 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen> with Single
     }
 
     try {
+      final permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        await Geolocator.requestPermission();
+      }
       final pos = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
       if (mounted) {
         setState(() {
@@ -75,12 +79,8 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen> with Single
         _loadRoute();
       }
     } catch (_) {
-      // Fallback center
       if (mounted) {
-        setState(() {
-          _officerPosition = const LatLng(12.8785, 80.0850);
-        });
-        _loadRoute();
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Location unavailable. Route map will not load until permission granted.')));
       }
     }
 
