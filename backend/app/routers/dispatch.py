@@ -122,56 +122,41 @@ async def _find_and_assign_officers(alert_id: int, db: AsyncSession):
     if not alert:
         return {"status": "error", "message": "Alert not found"}
 
-    # Expanding bounding box search: start at ~55km (0.5 deg) up to ~880km (8.0 deg)
-    officers = []
-    radius_deg = 0.5
-    max_radius_deg = 8.0
-    
-    while radius_deg <= max_radius_deg:
-        lat_min, lat_max = alert.latitude - radius_deg, alert.latitude + radius_deg
-        lng_min, lng_max = alert.longitude - radius_deg, alert.longitude + radius_deg
-        
-        result_off = await db.execute(
-            select(Officer).where(
-                Officer.status == "available",
-                Officer.latitude.between(lat_min, lat_max),
-                Officer.longitude.between(lng_min, lng_max)
-            )
-        )
-        officers = result_off.scalars().all()
-        
-        if officers:
-            break
-            
-        radius_deg += 0.5
-    
+    # Query ALL available officers — no bounding box, any cop in India receives the alert
+    result_off = await db.execute(
+        select(Officer).where(Officer.status == "available")
+    )
+    officers = result_off.scalars().all()
+
     if not officers:
         return {"status": "no_officers"}
 
-    # Sort by distance
+    # Sort by distance so closest is at the top of the list
     scored = []
     for o in officers:
         if o.latitude and o.longitude:
             dist = haversine_km(o.latitude, o.longitude, alert.latitude, alert.longitude)
             scored.append((dist, o))
-            
+
     if not scored:
         return {"status": "no_officers_with_location"}
 
     scored.sort(key=lambda x: x[0])
-    
-    # Assign to closest N officers
-    closest_officers = [o[1].id for o in scored[:5]]
-    
-    for oid in closest_officers:
+
+    # Assign ALL available officers — every cop sees the alert
+    all_officer_ids = [o[1].id for o in scored]
+
+    for oid in all_officer_ids:
         _officer_alert_map[oid] = alert_id
-    _active_dispatches[alert_id] = {"officer_ids": closest_officers}
-    
+    _active_dispatches[alert_id] = {"officer_ids": all_officer_ids}
+
     return {
-        "status": "dispatched", 
-        "officer_ids": closest_officers, 
-        "distance": round(scored[0][0], 2)
+        "status": "dispatched",
+        "officer_count": len(all_officer_ids),
+        "officer_ids": all_officer_ids,
+        "closest_distance_km": round(scored[0][0], 2),
     }
+
 
 @router.post("/trigger/{alert_id}", summary="System endpoint to find nearest officer")
 async def trigger_dispatch(alert_id: int, db: AsyncSession = Depends(get_db)):
