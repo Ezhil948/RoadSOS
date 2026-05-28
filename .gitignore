@@ -1,0 +1,17 @@
+# Ignore Python virtual environment and cache
+backend/venv/
+backend/__pycache__/
+backend/.env
+backend/uploads/
+
+# Ignore Flutter build files and tools
+**/build/
+**/.dart_tool/
+**/.idea/
+**/.vscode/
+**/*.apk
+
+# Ignore unrelated large folders/archives
+E-commerce-Complete-Flutter-UI-master/
+E-commerce-Complete-Flutter-UI-master.zip
+apk/

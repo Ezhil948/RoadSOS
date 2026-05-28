@@ -1,0 +1,101 @@
+"""
+RoadSOS FastAPI Backend
+DB: roadsos_db | User: roadsos_admin
+Run: uvicorn main:app --reload --host 0.0.0.0 --port 8000
+Swagger: http://localhost:8000/docs
+"""
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from contextlib import asynccontextmanager
+from app.routers import services, sos, accident, ai_analysis, sync, emergency, feedback, logs, dispatch, auth
+from app.utils.database import engine, Base, check_db_connection
+import os
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # ── Startup ──────────────────────────────────────────
+    print("RoadSOS API starting up...")
+    # Create all tables in roadsos_db
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    db_ok = await check_db_connection()
+    print(f"   MySQL roadsos_db: {'OK Connected' if db_ok else 'FAILED'}")
+    print(f"   User: roadsos_admin @ {os.getenv('DB_HOST', 'localhost')}")
+    yield
+    # ── Shutdown ─────────────────────────────────────────
+    print("RoadSOS API shutting down...")
+    await engine.dispose()
+
+
+app = FastAPI(
+    title="RoadSOS API",
+    description="""
+## 🚨 RoadSOS — Emergency Response Backend
+
+**IIT Madras COERS 2026 Hackathon**
+
+### Endpoints
+| Group | Purpose |
+|---|---|
+| `/api/v1/services` | Nearby police, hospital, ambulance, towing, puncture, showroom |
+| `/api/v1/sos` | SOS alert trigger and management |
+| `/api/v1/accident` | Accident report submission |
+| `/api/v1/ai` | YOLOv8 accident image analysis |
+| `/api/v1/emergency` | Country emergency numbers |
+| `/api/v1/feedback` | Service ratings |
+| `/api/v1/sync` | Offline bundle pre-fetch |
+| `/api/v1/logs` | App event logging |
+
+**Database:** `roadsos_db` (MySQL 8.0)  
+**Maps:** OpenStreetMap (free, no API key, global)
+    """,
+    version="2.0.0",
+    lifespan=lifespan,
+)
+
+# CORS — Flutter mobile (all origins for MVP)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# ── Routers ────────────────────────────────────────────────
+_ROUTERS = [
+    (services.router,    "/api/v1/services",  ["Services"]),
+    (sos.router,         "/api/v1/sos",       ["SOS"]),
+    (accident.router,    "/api/v1/accident",  ["Accident"]),
+    (ai_analysis.router, "/api/v1/ai",        ["AI"]),
+    (emergency.router,   "/api/v1/emergency", ["Emergency Numbers"]),
+    (feedback.router,    "/api/v1/feedback",  ["Feedback"]),
+    (sync.router,        "/api/v1/sync",      ["Offline Sync"]),
+    (logs.router,        "/api/v1/logs",      ["Logs"]),
+    (dispatch.router,    "/api/v1/dispatch",  ["Dispatch"]),
+    (auth.router,        "/api/v1/auth",      ["Auth"]),
+]
+for router_module, prefix, tags in _ROUTERS:
+    app.include_router(router_module, prefix=prefix, tags=tags)
+
+
+@app.get("/health", tags=["Health"])
+async def health():
+    db_ok = await check_db_connection()
+    return {
+        "status": "ok" if db_ok else "degraded",
+        "service": "RoadSOS API v2.0",
+        "database": "connected" if db_ok else "unreachable",
+        "db_name": os.getenv("DB_NAME", "roadsos_db"),
+        "db_user": os.getenv("DB_USER", "roadsos_admin"),
+    }
+
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(
+        "main:app",
+        host=os.getenv("APP_HOST", "0.0.0.0"),
+        port=int(os.getenv("APP_PORT", 8000)),
+        reload=True,
+    )

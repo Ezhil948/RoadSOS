@@ -1,0 +1,42 @@
+name: road_sos
+description: RoadSOS - Emergency Response App for Road Crash Victims
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.6
+  http: ^1.2.0
+  geolocator: ^11.0.0
+  flutter_map: ^6.1.0
+  latlong2: ^0.9.0
+  shared_preferences: ^2.2.3
+  sqflite: ^2.3.3
+  path: ^1.9.0
+  permission_handler: ^11.3.1
+  url_launcher: ^6.3.0
+  image_picker: ^0.8.7+6
+  connectivity_plus: ^6.0.3
+  flutter_phone_direct_caller: ^2.1.1
+  cached_network_image: ^3.3.1
+  shimmer: ^3.0.0
+  provider: ^6.1.2
+  dio: ^5.4.3
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+  hive_generator: ^2.0.1
+  build_runner: ^2.4.8
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/
+    - assets/icons/
