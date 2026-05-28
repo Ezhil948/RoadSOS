@@ -80,15 +80,24 @@ class DispatchPollingNotifier extends StateNotifier<OfficerStatus> {
         },
       );
 
-      // 2. Poll for dispatch ONLY if we are Online
+      // 2. Poll for dispatch
       if (state is Online) {
         final res = await dio.get(ApiEndpoints.pollDispatch(_officerId));
         if (res.data['has_dispatch'] == true) {
           final dispatch = DispatchModel.fromJson(res.data['dispatch']);
           state = Dispatching(dispatch);
-          
-          // Triggers side effects via the router
           _triggerDispatchAlert();
+        }
+      }
+
+      // 3. If Navigating, check if the citizen cancelled the alert
+      if (state is Navigating) {
+        final currentDispatch = (state as Navigating).dispatch;
+        final res = await dio.get(ApiEndpoints.pollDispatch(_officerId));
+        // Backend returns has_dispatch: false when alert is cancelled/resolved
+        if (res.data['has_dispatch'] == false) {
+          state = Online();
+          _onAlertCancelled(currentDispatch.alertId);
         }
       }
       
@@ -96,11 +105,17 @@ class DispatchPollingNotifier extends StateNotifier<OfficerStatus> {
     } catch (e) {
       _failCount++;
       if (_failCount >= 3) {
-        // Show connection warning (could be handled via a separate warning provider)
-        print("Connection warning");
+        print("Connection warning: $e");
       }
     }
   }
+
+  void _onAlertCancelled(int alertId) {
+    // Notify via haptic — actual UI SnackBar shown in home_screen listening to state
+    HapticFeedback.mediumImpact();
+    print("Alert #$alertId was cancelled by citizen. Returning to standby.");
+  }
+
   
   void _triggerDispatchAlert() {
     HapticFeedback.heavyImpact();

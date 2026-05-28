@@ -126,3 +126,36 @@ async def mark_false_alarm(alert_id: int, payload: Optional[ResolveRequest] = No
         trust.false_alarms_count += 1
         
     return {"status": "ok", "message": "Marked as false alarm. Device trust score penalized."}
+
+
+@router.post("/alerts/{alert_id}/cancel", summary="Citizen cancels their own SOS within the grace period")
+async def cancel_sos_alert(alert_id: int, db: AsyncSession = Depends(get_db)):
+    """
+    Called by the citizen app when the user taps Cancel within 10 seconds.
+    Sets the alert to 'cancelled' and releases any assigned officers back to available.
+    """
+    from app.routers.dispatch import _active_dispatches, _officer_alert_map
+
+    result = await db.execute(select(SOSAlert).where(SOSAlert.id == alert_id))
+    alert = result.scalar_one_or_none()
+    if not alert:
+        raise HTTPException(404, f"Alert {alert_id} not found")
+    if alert.status != "active":
+        raise HTTPException(400, f"Alert {alert_id} is already {alert.status}")
+
+    alert.status = "cancelled"
+    alert.resolved_at = func.now()
+
+    # Release any officers assigned to this dispatch
+    dispatch_info = _active_dispatches.pop(alert_id, None)
+    if dispatch_info:
+        for oid in dispatch_info.get("officer_ids", []):
+            _officer_alert_map.pop(oid, None)
+
+    db.add(AppLog(
+        event_type="SOS_CANCELLED",
+        log_metadata=json.dumps({"alert_id": alert_id, "reason": "citizen_cancelled_within_grace_period"})
+    ))
+
+    return {"status": "ok", "alert_id": alert_id, "message": "SOS cancelled. Officers have been stood down."}
+
