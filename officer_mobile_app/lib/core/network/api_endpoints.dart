@@ -1,5 +1,5 @@
 class ApiEndpoints {
-  static const String baseUrl = 'http://localhost:8000/api/v1';
+  static const String baseUrl = 'https://roadsos-backend-htmk.onrender.com/api/v1';
 
   static const String login = '/auth/login';
   

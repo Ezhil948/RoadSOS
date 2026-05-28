@@ -3,8 +3,7 @@ final class AppConstants {
   AppConstants._(); // Private constructor to prevent instantiation
 
   // API Base URL - change for production
-  static const String baseUrl = 'http://localhost:8000'; // Host local IP for physical mobile device connection
-  // static const String baseUrl = 'http://10.82.59.177:8000'; // Mobile device IP
+  static const String baseUrl = 'https://roadsos-backend-htmk.onrender.com'; // Hosted on Render
 
   // API Endpoints
   static const String nearbyServicesEndpoint = '/api/v1/services/nearby';
