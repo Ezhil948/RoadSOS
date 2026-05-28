@@ -24,9 +24,19 @@ DATABASE_URL = (
 
 _debug_mode = os.getenv("DEBUG", "false").lower() == "true"
 
+connect_args = {}
+# Only use SSL if connecting to a remote database (like Aiven)
+if "localhost" not in DB_HOST and "127.0.0.1" not in DB_HOST:
+    import ssl
+    ssl_context = ssl.create_default_context()
+    ssl_context.check_hostname = False
+    ssl_context.verify_mode = ssl.CERT_NONE
+    connect_args["ssl"] = ssl_context
+
 engine = create_async_engine(
     DATABASE_URL,
     echo=_debug_mode,
+    connect_args=connect_args,
     pool_pre_ping=True,
     pool_recycle=3600,
     pool_size=10,
