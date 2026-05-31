@@ -146,7 +146,6 @@ async def list_sos_alerts(
             }
             for a in alerts
         ],
-        ],
     }
 
 
