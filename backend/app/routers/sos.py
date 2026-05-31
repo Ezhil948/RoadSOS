@@ -211,7 +211,9 @@ async def get_alert_status(alert_id: int, db: AsyncSession = Depends(get_db)):
                     # Trigger dispatch again (max once per 10s block)
                     await trigger_dispatch(alert.id, db)
 
-    return response@router.patch("/alerts/{alert_id}/resolve", summary="Resolve an SOS alert")
+    return response
+
+@router.patch("/alerts/{alert_id}/resolve", summary="Resolve an SOS alert")
 async def resolve_alert(alert_id: int, payload: Optional[ResolveRequest] = None, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(SOSAlert).where(SOSAlert.id == alert_id))
     alert = result.scalar_one_or_none()
