@@ -4,14 +4,16 @@ from app.models.db_models import Officer, OfficerStatusEnum
 
 async def seed_officer():
     async with AsyncSessionLocal() as db:
+        from app.utils.security import hash_password
         new_officer = Officer(
             id=1,
             name="John Doe",
             badge_number="BADGE123",
             phone="555-1234",
-            status=OfficerStatusEnum.offline
+            status=OfficerStatusEnum.offline,
+            password_hash=hash_password("password")
         )
-        db.add(new_officer)
+        await db.merge(new_officer)
         await db.commit()
         print("Officer seeded successfully!")
 

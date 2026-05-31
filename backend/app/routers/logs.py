@@ -46,6 +46,7 @@ async def recent_logs(limit: int = 50, db: AsyncSession = Depends(get_db)):
                 "event": log.event_type,
                 "lat": log.latitude,
                 "lng": log.longitude,
+                "metadata": json.loads(log.log_metadata) if log.log_metadata else None,
                 "at": str(log.logged_at),
             }
             for log in logs

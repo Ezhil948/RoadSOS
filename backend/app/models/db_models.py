@@ -15,7 +15,7 @@ Table relationships:
 
 from sqlalchemy import (
     Column, Integer, String, Float, DateTime, Text, Enum,
-    ForeignKey, Boolean, SmallInteger, Index
+    ForeignKey, Boolean, SmallInteger, Index, JSON
 )
 from sqlalchemy.sql import func
 from sqlalchemy.orm import relationship
@@ -64,6 +64,14 @@ class SOSAlert(Base):
     status = Column(Enum(AlertStatusEnum), default=AlertStatusEnum.active, index=True)
     alerted_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)
     resolved_at = Column(DateTime(timezone=True), nullable=True)
+
+    # Overhaul additions
+    reporters = Column(JSON, default=list)
+    location_update_pending = Column(Boolean, default=False)
+    new_lat = Column(Float, nullable=True)
+    new_lng = Column(Float, nullable=True)
+    closure_notes = Column(Text, nullable=True)
+    closure_photo_urls = Column(JSON, default=list)
 
     # FK link to accident report (optional — set when user also files a report)
     accident_report_id = Column(Integer, ForeignKey("accident_reports.id"), nullable=True)

@@ -23,7 +23,7 @@ _overpass_client = httpx.AsyncClient(
 
 
 async def fetch_nearby_from_osm(
-    lat: float, lng: float, service_type: str, radius: int = 5000
+    lat: float, lng: float, service_type: str, radius: int = 15000
 ) -> List[Dict[str, Any]]:
     """Fetch nearby services from OpenStreetMap Overpass API.
 

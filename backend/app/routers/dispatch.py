@@ -15,6 +15,7 @@ router = APIRouter()
 # In-memory dispatch state for MVP
 _active_dispatches: dict[int, dict] = {}       # alert_id → {"officer_ids": [...]}
 _officer_alert_map: dict[int, int] = {}        # officer_id → alert_id  (inverted index)
+_accepted_dispatches: dict[int, int] = {}      # alert_id → officer_id (assigned officer)
 
 
 @router.post("/officers/{officer_id}/ping", summary="Update officer live location and status")
@@ -58,6 +59,9 @@ async def poll_dispatch(officer_id: int, db: AsyncSession = Depends(get_db)):
                 "distance_km": round(dist, 2),
                 "eta_mins": int(dist * 2), # rough estimate 30km/h
                 "message": alert.message or "Emergency SOS",
+                "location_update_pending": alert.location_update_pending,
+                "new_lat": alert.new_lat,
+                "new_lng": alert.new_lng,
             }
         }
     else:
@@ -82,7 +86,8 @@ async def respond_to_dispatch(
         result = await db.execute(select(SOSAlert).where(SOSAlert.id == alert_id))
         alert = result.scalar_one_or_none()
         if alert:
-            alert.status = "resolved" # Or add 'attended' enum to SOS
+            # We don't resolve it yet, it remains 'active' until the officer arrives and closes it
+            alert.status = "active" 
             
         result_off = await db.execute(select(Officer).where(Officer.id == officer_id))
         officer = result_off.scalar_one()
@@ -90,6 +95,7 @@ async def respond_to_dispatch(
         
         _officer_alert_map.pop(officer_id, None)
         _active_dispatches.pop(alert_id, None)
+        _accepted_dispatches[alert_id] = officer_id  # Track who took it
         
         db.add(AppLog(
             event_type="DISPATCH_ACCEPTED",
@@ -119,32 +125,41 @@ async def respond_to_dispatch(
 async def _find_and_assign_officers(alert_id: int, db: AsyncSession):
     result = await db.execute(select(SOSAlert).where(SOSAlert.id == alert_id))
     alert = result.scalar_one_or_none()
-    if not alert:
-        return {"status": "error", "message": "Alert not found"}
+    if not alert or not alert.latitude or not alert.longitude:
+        return {"status": "error", "message": "Alert not found or invalid location"}
 
-    # Query ALL available officers — no bounding box, any cop in India receives the alert
+    # 1 degree lat ~ 111km. 50km ~ 0.45 degrees.
+    import math
+    lat_delta = 50.0 / 111.0
+    lng_delta = 50.0 / (111.0 * math.cos(math.radians(alert.latitude)))
+
+    # Fast 50km bounding box pre-filter query
     result_off = await db.execute(
-        select(Officer).where(Officer.status == "available")
+        select(Officer).where(
+            Officer.status == "available",
+            Officer.latitude.between(alert.latitude - lat_delta, alert.latitude + lat_delta),
+            Officer.longitude.between(alert.longitude - lng_delta, alert.longitude + lng_delta)
+        )
     )
     officers = result_off.scalars().all()
 
     if not officers:
         return {"status": "no_officers"}
 
-    # Sort by distance so closest is at the top of the list
-    scored = []
-    for o in officers:
-        if o.latitude and o.longitude:
-            dist = haversine_km(o.latitude, o.longitude, alert.latitude, alert.longitude)
-            scored.append((dist, o))
+    # Calculate exact Haversine distance and sort
+    scored = [
+        (haversine_km(o.latitude, o.longitude, alert.latitude, alert.longitude), o)
+        for o in officers if o.latitude and o.longitude
+    ]
 
     if not scored:
         return {"status": "no_officers_with_location"}
 
     scored.sort(key=lambda x: x[0])
-
-    # Assign ALL available officers — every cop sees the alert
-    all_officer_ids = [o[1].id for o in scored]
+    
+    # Cap dispatch broadcast to top 5 nearest officers
+    top_officers = scored[:5]
+    all_officer_ids = [o[1].id for o in top_officers]
 
     for oid in all_officer_ids:
         _officer_alert_map[oid] = alert_id
@@ -154,7 +169,7 @@ async def _find_and_assign_officers(alert_id: int, db: AsyncSession):
         "status": "dispatched",
         "officer_count": len(all_officer_ids),
         "officer_ids": all_officer_ids,
-        "closest_distance_km": round(scored[0][0], 2),
+        "closest_distance_km": round(top_officers[0][0], 2),
     }
 
 

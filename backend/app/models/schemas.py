@@ -1,11 +1,11 @@
 """Pydantic schemas for request and response validation."""
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional, List
 
 # ── Auth ───────────────────────────────────────────────────
 class LoginRequest(BaseModel):
-    badge_number: str
-    password: str
+    badge_number: str = Field(..., max_length=30)
+    password: str = Field(..., max_length=128)
 
 class LoginResponse(BaseModel):
     officer_id: int
@@ -18,9 +18,9 @@ class LoginResponse(BaseModel):
 class SOSRequest(BaseModel):
     latitude: float
     longitude: float
-    severity: str = "critical"
-    message: Optional[str] = None
-    device_id: Optional[str] = None
+    severity: str = Field("critical", max_length=20)
+    message: Optional[str] = Field(None, max_length=1000)
+    device_id: Optional[str] = Field(None, max_length=100)
 
 class SOSResponse(BaseModel):
     status: str
@@ -30,7 +30,7 @@ class SOSResponse(BaseModel):
     action: str = "CALL_112"
 
 class ResolveRequest(BaseModel):
-    officer_notes: Optional[str] = None
+    officer_notes: Optional[str] = Field(None, max_length=1000)
 
 
 # ── Accident Reports ───────────────────────────────────────
@@ -42,7 +42,7 @@ class StatusUpdate(BaseModel):
 class LocationPing(BaseModel):
     latitude: float
     longitude: float
-    status: str
+    status: str = Field(..., max_length=30)
 
 class DispatchResponse(BaseModel):
     action: str  # "accept" or "reject"

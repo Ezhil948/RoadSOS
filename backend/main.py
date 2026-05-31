@@ -4,12 +4,78 @@ DB: roadsos_db | User: roadsos_admin
 Run: uvicorn main:app --reload --host 0.0.0.0 --port 8000
 Swagger: http://localhost:8000/docs
 """
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import JSONResponse
 from contextlib import asynccontextmanager
 from app.routers import services, sos, accident, ai_analysis, sync, emergency, feedback, logs, dispatch, auth
 from app.utils.database import engine, Base, check_db_connection
 import os
+import time
+from collections import defaultdict
+
+class RateLimitMiddleware(BaseHTTPMiddleware):
+    def __init__(self, app):
+        super().__init__(app)
+        self.auth_requests = defaultdict(list)
+        self.general_requests = defaultdict(list)
+
+    async def dispatch(self, request: Request, call_next):
+        client_ip = request.client.host if request.client else "unknown"
+        path = request.url.path
+        now = time.time()
+
+        if path.startswith("/api/v1/auth"):
+            # Max 5 attempts per 15 minutes (900 seconds)
+            self.auth_requests[client_ip] = [t for t in self.auth_requests[client_ip] if now - t < 900]
+            if len(self.auth_requests[client_ip]) >= 5:
+                retry_after = int(900 - (now - self.auth_requests[client_ip][0]))
+                return JSONResponse(
+                    status_code=429,
+                    content={"detail": "Too many login attempts. Please try again later."},
+                    headers={"Retry-After": str(retry_after)}
+                )
+            self.auth_requests[client_ip].append(now)
+        else:
+            # General rate limit: 100 requests per 60 seconds
+            self.general_requests[client_ip] = [t for t in self.general_requests[client_ip] if now - t < 60]
+            if len(self.general_requests[client_ip]) >= 100:
+                retry_after = int(60 - (now - self.general_requests[client_ip][0]))
+                return JSONResponse(
+                    status_code=429,
+                    content={"detail": "Rate limit exceeded. Too many requests."},
+                    headers={"Retry-After": str(retry_after)}
+                )
+            self.general_requests[client_ip].append(now)
+
+        return await call_next(request)
+
+
+class RequestBodySizeLimitMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        path = request.url.path
+        limit = 1 * 1024 * 1024  # Default: 1 MB
+        
+        if path.startswith("/api/v1/accident/report") or path.endswith("/close"):
+            limit = 15 * 1024 * 1024  # Endpoints allowing uploads: 15 MB
+
+        content_length_header = request.headers.get("content-length")
+        if content_length_header:
+            try:
+                content_length = int(content_length_header)
+                if content_length > limit:
+                    return JSONResponse(
+                        status_code=413,
+                        content={"detail": "Payload too large. Max size exceeded."}
+                    )
+            except ValueError:
+                return JSONResponse(
+                    status_code=400,
+                    content={"detail": "Invalid Content-Length header."}
+                )
+        return await call_next(request)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -61,6 +127,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.add_middleware(RateLimitMiddleware)
+app.add_middleware(RequestBodySizeLimitMiddleware)
 
 # ── Routers ────────────────────────────────────────────────
 _ROUTERS = [

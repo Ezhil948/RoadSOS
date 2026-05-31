@@ -10,19 +10,18 @@ router = APIRouter()
 
 @router.post("/login", response_model=LoginResponse)
 async def login(payload: LoginRequest, db: AsyncSession = Depends(get_db)):
+    from app.utils.security import hash_password, verify_password
+    
     result = await db.execute(select(Officer).where(Officer.badge_number == payload.badge_number))
     officer = result.scalar_one_or_none()
+    
     if not officer:
-        # Auto-create officer for MVP so testing doesn't require pre-seeded DB
-        officer = Officer(
-            name=f"Officer {payload.badge_number}",
-            badge_number=payload.badge_number,
-            phone=None,
-            status="offline"
-        )
-        db.add(officer)
-        await db.flush()
-        await db.refresh(officer)
+        raise HTTPException(status_code=401, detail="Invalid badge number or password")
+        
+    # Verify password
+    if not verify_password(payload.password, officer.password_hash):
+        raise HTTPException(status_code=401, detail="Invalid badge number or password")
+            
     return LoginResponse(
         officer_id=officer.id,
         name=officer.name,

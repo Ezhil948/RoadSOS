@@ -39,7 +39,7 @@ async def get_nearby_services(
     lat: float = Query(..., description="User latitude"),
     lng: float = Query(..., description="User longitude"),
     type: str = Query("hospital", description="Service type: police|hospital|ambulance|towing|puncture|showroom"),
-    radius: int = Query(5000, description="Radius in meters (max 20000)", le=20000),
+    radius: int = Query(15000, description="Radius in meters (max 30000)", le=30000),
     db: AsyncSession = Depends(get_db),
 ):
     # Validate against the enum instead of a hardcoded list

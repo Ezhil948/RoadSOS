@@ -7,18 +7,14 @@ from app.models.db_models import AccidentReport, AppLog
 from app.models.schemas import StatusUpdate
 from typing import Optional
 from pathlib import Path
-import uuid, json
-import aiofiles
+import uuid, json, os
+import httpx
 
 router = APIRouter()
 
-UPLOAD_DIR = Path("uploads/accidents")
-UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-
 # Maximum image size: 10 MB
 _MAX_IMAGE_BYTES = 10 * 1024 * 1024
-_CHUNK_SIZE = 64 * 1024  # 64 KB read chunks
-
+IMGBB_API_KEY = os.getenv("IMGBB_API_KEY")
 
 @router.post("/report", summary="Submit an accident report")
 async def report_accident(
@@ -33,20 +29,25 @@ async def report_accident(
     img_path: Optional[str] = None
 
     if image and image.filename:
-        ext = Path(image.filename).suffix
-        filename = f"{uuid.uuid4().hex}{ext}"
-        dest = UPLOAD_DIR / filename
-
-        # Stream write in chunks async — avoids blocking event loop
-        total_bytes = 0
-        async with aiofiles.open(dest, "wb") as f:
-            while chunk := await image.read(_CHUNK_SIZE):
-                total_bytes += len(chunk)
-                if total_bytes > _MAX_IMAGE_BYTES:
-                    dest.unlink(missing_ok=True)
-                    raise HTTPException(413, "Image exceeds 10 MB limit")
-                await f.write(chunk)
-        img_path = str(dest)
+        file_bytes = await image.read()
+        if len(file_bytes) > _MAX_IMAGE_BYTES:
+            raise HTTPException(413, "Image exceeds 10 MB limit")
+        
+        # Upload to ImgBB
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            files = {"image": (image.filename, file_bytes, image.content_type)}
+            try:
+                response = await client.post(
+                    f"https://api.imgbb.com/1/upload?key={IMGBB_API_KEY}",
+                    files=files
+                )
+                if response.status_code == 200:
+                    data = response.json()
+                    img_path = data.get("data", {}).get("url")
+                else:
+                    print(f"ImgBB upload failed: {response.text}")
+            except Exception as e:
+                print(f"Error uploading to ImgBB: {e}")
 
     report = AccidentReport(
         latitude=latitude,
