@@ -199,7 +199,7 @@ async def get_alert_status(alert_id: int, db: AsyncSession = Depends(get_db)):
             if alert.alerted_at:
                 delta = (datetime.now(timezone.utc) - alert.alerted_at.replace(tzinfo=timezone.utc)).total_seconds()
                 if delta > 300:
-                    alert.status = "cancelled_by_citizen"
+                    alert.status = "cancelled"
                     alert.cancellation_reason = "timeout"
                     alert.cancelled_by = "citizen"
                     alert.resolved_at = func.now()
