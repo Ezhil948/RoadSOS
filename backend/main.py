@@ -80,13 +80,19 @@ class RequestBodySizeLimitMiddleware(BaseHTTPMiddleware):
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # ── Startup ──────────────────────────────────────────
-    print("RoadSOS API starting up...")
-    # Create all tables in roadsos_db
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-    db_ok = await check_db_connection()
-    print(f"   MySQL roadsos_db: {'OK Connected' if db_ok else 'FAILED'}")
-    print(f"   User: roadsos_admin @ {os.getenv('DB_HOST', 'localhost')}")
+    print("RoadSOS API starting up...", flush=True)
+    try:
+        # Create all tables in roadsos_db
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+        db_ok = await check_db_connection()
+        print(f"   MySQL roadsos_db: {'OK Connected' if db_ok else 'FAILED'}", flush=True)
+        print(f"   User: roadsos_admin @ {os.getenv('DB_HOST', 'localhost')}", flush=True)
+    except Exception as e:
+        import traceback
+        print(f"CRITICAL ERROR during database startup: {e}", flush=True)
+        traceback.print_exc()
+        # Do not raise here; allow Uvicorn to start so Render deploy succeeds and we can see the logs!
     yield
     # ── Shutdown ─────────────────────────────────────────
     print("RoadSOS API shutting down...")
