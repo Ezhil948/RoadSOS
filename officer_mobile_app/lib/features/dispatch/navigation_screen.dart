@@ -8,6 +8,7 @@ import 'package:go_router/go_router.dart';
 import 'package:dio/dio.dart';
 
 import 'dispatch_provider.dart';
+import '../../core/models/dispatch.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/network/api_client.dart';
 import '../../core/network/api_endpoints.dart';
@@ -38,6 +39,7 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen> with Single
   
   int _remainingSeconds = 0;
   Timer? _countdownTimer;
+  bool _isShowingUpdateDialog = false;
 
   @override
   void initState() {
@@ -249,6 +251,53 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen> with Single
     }
   }
 
+  void _showLocationUpdateDialog(DispatchModel dispatch) {
+    if (_isShowingUpdateDialog) return;
+    _isShowingUpdateDialog = true;
+    
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        return AlertDialog(
+          backgroundColor: isDark ? kDarkSurface : kLightSurface,
+          title: Text('LOCATION UPDATE', style: AppTheme.monoMd.copyWith(color: kAccentAmber)),
+          content: Text(
+            'The victim has reported a new location. Would you like to reroute?',
+            style: TextStyle(color: isDark ? kDarkText : kLightText),
+          ),
+          actions: [
+            OutlinedButton(
+              onPressed: () async {
+                Navigator.pop(ctx);
+                _isShowingUpdateDialog = false;
+                try {
+                  final dio = ref.read(dioProvider);
+                  await dio.post('${ApiEndpoints.baseUrl}/sos/alerts/${dispatch.alertId}/location-update/dismiss');
+                } catch (_) {}
+              },
+              child: const Text('DISMISS'),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                Navigator.pop(ctx);
+                _isShowingUpdateDialog = false;
+                try {
+                  final dio = ref.read(dioProvider);
+                  await dio.post('${ApiEndpoints.baseUrl}/sos/alerts/${dispatch.alertId}/location-update/confirm');
+                  // Route will refresh on next poll when dispatch data updates
+                } catch (_) {}
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: kAccentAmber, foregroundColor: Colors.black),
+              child: const Text('REROUTE'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   String _formatDuration(int seconds) {
     if (seconds <= 0) return '00:00';
     final m = (seconds ~/ 60).toString().padLeft(2, '0');
@@ -267,6 +316,16 @@ class _NavigationScreenState extends ConsumerState<NavigationScreen> with Single
 
   @override
   Widget build(BuildContext context) {
+    ref.listen<OfficerStatus>(dispatchProvider, (previous, current) {
+      if (current is Navigating && current.dispatch.locationUpdatePending) {
+        if (!_isShowingUpdateDialog) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _showLocationUpdateDialog(current.dispatch);
+          });
+        }
+      }
+    });
+
     final status = ref.watch(dispatchProvider);
     if (status is! Navigating) {
       return const Scaffold(backgroundColor: kDarkBg, body: Center(child: CircularProgressIndicator()));

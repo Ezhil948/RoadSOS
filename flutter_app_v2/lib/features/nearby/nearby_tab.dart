@@ -20,14 +20,12 @@ class _NearbyTabState extends State<NearbyTab> {
   String _activeType = 'hospital';
   bool _loading = false;
   bool _showResults = false;
+  String? _errorMessage;
 
   static const List<Map<String, dynamic>> _serviceTypes = [
     {'key': 'hospital',  'label': 'Hospital',      'emoji': '🏥', 'color': AppTheme.primaryRed},
     {'key': 'police',    'label': 'Police',         'emoji': '🚔', 'color': AppTheme.accentBlue},
-    {'key': 'ambulance', 'label': 'Ambulance',      'emoji': '🚑', 'color': AppTheme.accentGreen},
-    {'key': 'towing',    'label': 'Towing',         'emoji': '🚛', 'color': AppTheme.accentPurple},
     {'key': 'puncture',  'label': 'Tyre Shop',      'emoji': '🔧', 'color': AppTheme.accentTeal},
-    {'key': 'showroom',  'label': 'Showroom',       'emoji': '🏪', 'color': AppTheme.accentAmber},
   ];
 
   static final _typeStyleMap = {
@@ -45,19 +43,27 @@ class _NearbyTabState extends State<NearbyTab> {
     final api = context.read<ApiService>();
     if (loc.currentPosition == null) return;
 
-    setState(() { _loading = true; _showResults = false; });
+    setState(() { _loading = true; _showResults = false; _errorMessage = null; });
 
-    final places = await api.getNearbyServices(
-      latitude: loc.currentPosition!.latitude,
-      longitude: loc.currentPosition!.longitude,
-      serviceType: _activeType,
-    );
+    try {
+      final places = await api.getNearbyServices(
+        latitude: loc.currentPosition!.latitude,
+        longitude: loc.currentPosition!.longitude,
+        serviceType: _activeType,
+      );
 
-    setState(() {
-      _markers = places;
-      _loading = false;
-      _showResults = places.isNotEmpty;
-    });
+      setState(() {
+        _markers = places;
+        _loading = false;
+        _showResults = places.isNotEmpty;
+      });
+    } catch (e) {
+      setState(() {
+        _loading = false;
+        _markers = [];
+        _errorMessage = 'Network Error. Tap to retry.';
+      });
+    }
   }
 
   Color get _activeColor => (_typeStyleMap[_activeType]?['color'] as Color?) ?? AppTheme.primaryRed;
@@ -234,121 +240,96 @@ class _NearbyTabState extends State<NearbyTab> {
               child: Center(child: CircularProgressIndicator(color: AppTheme.primaryRed)),
             ),
 
-          // ── Results count pill ──────────────────────────────────────────
+          // ── Bottom Sheet (Results List) ──────────────────────────────────
           if (!_loading && _markers.isNotEmpty && loc.hasPermission)
-            Positioned(
-              bottom: 24,
-              left: 20, right: 20,
-              child: GestureDetector(
-                onTap: () => _showResultsList(),
-                child: Container(
-                  padding: const EdgeInsets.all(16),
+            DraggableScrollableSheet(
+              initialChildSize: 0.35,
+              minChildSize: 0.15,
+              maxChildSize: 0.9,
+              snap: true,
+              builder: (context, scrollCtrl) {
+                return Container(
                   decoration: BoxDecoration(
                     color: AppTheme.surfaceDark.withOpacity(0.95),
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: _activeColor.withOpacity(0.4)),
-                    boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.4), blurRadius: 20)],
+                    borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                    border: Border(top: BorderSide(color: AppTheme.borderDark)),
+                    boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.5), blurRadius: 20)],
                   ),
-                  child: Row(
+                  child: Column(
                     children: [
+                      // Handle
                       Container(
-                        width: 40, height: 40,
-                        decoration: BoxDecoration(
-                          color: _activeColor.withOpacity(0.15),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Center(child: Text(_activeEmoji, style: const TextStyle(fontSize: 20))),
+                        margin: const EdgeInsets.only(top: 12),
+                        width: 40, height: 4,
+                        decoration: BoxDecoration(color: AppTheme.textMuted, borderRadius: BorderRadius.circular(2)),
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
+                      // Header
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+                        child: Row(
                           children: [
+                            Text(_activeEmoji, style: const TextStyle(fontSize: 22)),
+                            const SizedBox(width: 8),
                             Text(
-                              '${_markers.length} ${_typeStyleMap[_activeType]?['label'] ?? 'places'} found nearby',
-                              style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: Colors.white),
+                              '${_typeStyleMap[_activeType]?['label'] ?? 'Nearby'} (${_markers.length})',
+                              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.white),
                             ),
+                            const Spacer(),
                             Text(
-                              'Closest: ${_markers.first.distanceLabel} away',
-                              style: const TextStyle(fontSize: 12, color: AppTheme.textMuted),
+                              'Closest: ${_markers.first.distanceLabel}',
+                              style: TextStyle(fontSize: 12, color: _activeColor, fontWeight: FontWeight.w600),
                             ),
                           ],
                         ),
                       ),
-                      Icon(Icons.expand_less_rounded, color: _activeColor),
+                      // List
+                      Expanded(
+                        child: ListView.builder(
+                          controller: scrollCtrl,
+                          padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                          itemCount: _markers.length,
+                          itemBuilder: (ctx, i) => _buildResultItem(_markers[i]),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+
+          // ── No results / Error hint ─────────────────────────────────────
+          if (!_loading && _markers.isEmpty && loc.hasPermission)
+            Positioned(
+              bottom: 24,
+              left: 20, right: 20,
+              child: GestureDetector(
+                onTap: _errorMessage != null ? _loadServices : null,
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: _errorMessage != null ? AppTheme.primaryRed.withOpacity(0.1) : AppTheme.surfaceDark.withOpacity(0.95),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: _errorMessage != null ? AppTheme.primaryRed : AppTheme.borderDark),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(_errorMessage != null ? Icons.error_outline_rounded : Icons.info_outline_rounded, 
+                           color: _errorMessage != null ? AppTheme.primaryRed : AppTheme.textMuted),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          _errorMessage ?? 'No results found within 15km. Try a different category.', 
+                          style: TextStyle(fontSize: 13, color: _errorMessage != null ? AppTheme.primaryRed : AppTheme.textMuted),
+                        ),
+                      ),
+                      if (_errorMessage != null)
+                        const Icon(Icons.refresh_rounded, color: AppTheme.primaryRed),
                     ],
                   ),
                 ),
               ),
             ),
-
-          // ── No results hint ─────────────────────────────────────────────
-          if (!_loading && _markers.isEmpty && loc.hasPermission)
-            Positioned(
-              bottom: 24,
-              left: 20, right: 20,
-              child: Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: AppTheme.surfaceDark.withOpacity(0.95),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppTheme.borderDark),
-                ),
-                child: const Row(
-                  children: [
-                    Icon(Icons.info_outline_rounded, color: AppTheme.textMuted),
-                    SizedBox(width: 12),
-                    Text('No results found nearby. Try a different category.', style: TextStyle(fontSize: 13, color: AppTheme.textMuted)),
-                  ],
-                ),
-              ),
-            ),
         ],
-      ),
-    );
-  }
-
-  void _showResultsList() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: AppTheme.surfaceDark,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
-      isScrollControlled: true,
-      builder: (_) => DraggableScrollableSheet(
-        initialChildSize: 0.5,
-        maxChildSize: 0.9,
-        minChildSize: 0.3,
-        expand: false,
-        builder: (ctx, scrollCtrl) => Column(
-          children: [
-            Container(
-              margin: const EdgeInsets.only(top: 12),
-              width: 40, height: 4,
-              decoration: BoxDecoration(color: AppTheme.borderDark, borderRadius: BorderRadius.circular(2)),
-            ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(20, 16, 20, 8),
-              child: Row(
-                children: [
-                  Text(_activeEmoji, style: const TextStyle(fontSize: 22)),
-                  const SizedBox(width: 8),
-                  Text(
-                    '${_typeStyleMap[_activeType]?['label'] ?? 'Nearby'} (${_markers.length})',
-                    style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: Colors.white),
-                  ),
-                ],
-              ),
-            ),
-            Expanded(
-              child: ListView.builder(
-                controller: scrollCtrl,
-                padding: const EdgeInsets.fromLTRB(20, 4, 20, 20),
-                itemCount: _markers.length,
-                itemBuilder: (ctx, i) => _buildResultItem(_markers[i]),
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
@@ -424,19 +405,56 @@ class _NearbyTabState extends State<NearbyTab> {
             ),
             if (place.phone != null) ...[
               const SizedBox(height: 20),
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      icon: const Icon(Icons.phone_rounded),
+                      label: const Text('Call'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: color,
+                        minimumSize: const Size.fromHeight(52),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      onPressed: () async {
+                        final uri = Uri(scheme: 'tel', path: place.phone);
+                        if (await canLaunchUrl(uri)) await launchUrl(uri);
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      icon: const Icon(Icons.navigation_rounded),
+                      label: const Text('Navigate'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppTheme.surfaceElevated,
+                        minimumSize: const Size.fromHeight(52),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: color.withOpacity(0.5))),
+                      ),
+                      onPressed: () async {
+                        final uri = Uri.parse('https://www.google.com/maps/dir/?api=1&destination=${place.latitude},${place.longitude}');
+                        if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ] else ...[
+              const SizedBox(height: 20),
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton.icon(
-                  icon: const Icon(Icons.phone_rounded),
-                  label: Text('Call ${place.phone}'),
+                  icon: const Icon(Icons.navigation_rounded),
+                  label: const Text('Navigate'),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: color,
+                    backgroundColor: AppTheme.surfaceElevated,
                     minimumSize: const Size.fromHeight(52),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12), side: BorderSide(color: color.withOpacity(0.5))),
                   ),
                   onPressed: () async {
-                    final uri = Uri(scheme: 'tel', path: place.phone);
-                    if (await canLaunchUrl(uri)) await launchUrl(uri);
+                    final uri = Uri.parse('https://www.google.com/maps/dir/?api=1&destination=${place.latitude},${place.longitude}');
+                    if (await canLaunchUrl(uri)) await launchUrl(uri, mode: LaunchMode.externalApplication);
                   },
                 ),
               ),

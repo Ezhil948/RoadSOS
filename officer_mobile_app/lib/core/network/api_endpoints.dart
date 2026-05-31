@@ -9,6 +9,9 @@ class ApiEndpoints {
   
   static String resolveAlert(int alertId) => '/sos/alerts/$alertId/resolve';
   static String falseAlarm(int alertId) => '/sos/alerts/$alertId/false_alarm';
+  static String cancelByPolice(int alertId) => '/sos/alerts/$alertId/police-cancel';
+  static String getAlertStatus(int alertId) => '/sos/alerts/$alertId/status';
   
   static String triggerSos(int officerId) => '/officers/$officerId/sos';
+  static String requestBackup(int officerId) => '/dispatch/officers/$officerId/backup';
 }

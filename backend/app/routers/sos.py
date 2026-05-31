@@ -6,7 +6,7 @@ from sqlalchemy.sql import func
 from app.utils.database import get_db
 from app.utils.geo import haversine_km
 from app.models.db_models import SOSAlert, AppLog
-from app.models.schemas import SOSRequest, SOSResponse, ResolveRequest
+from app.models.schemas import SOSRequest, SOSResponse, ResolveRequest, CitizenCancelRequest, PoliceCancelRequest
 from pydantic import BaseModel
 from typing import Optional, List
 import json, httpx, os
@@ -146,6 +146,9 @@ async def list_sos_alerts(
                 "status": a.status,
                 "message": a.message,
                 "alerted_at": str(a.alerted_at),
+                "cancellation_reason": a.cancellation_reason,
+                "cancellation_details": a.cancellation_details,
+                "cancelled_by": a.cancelled_by,
             }
             for a in alerts
         ],
@@ -167,7 +170,10 @@ async def get_alert_status(alert_id: int, db: AsyncSession = Depends(get_db)):
     response = {
         "status": alert.status, # "active", "resolved", "false_alarm", "cancelled"
         "is_dispatched": False,
-        "officer": None
+        "officer": None,
+        "cancellation_reason": alert.cancellation_reason,
+        "cancellation_details": alert.cancellation_details,
+        "cancelled_by": alert.cancelled_by
     }
     
     if alert.status == "active":
@@ -189,8 +195,21 @@ async def get_alert_status(alert_id: int, db: AsyncSession = Depends(get_db)):
                 }
         elif alert_id not in _active_dispatches:
             # Not in active broadcast, not accepted -> maybe no officers available?
-            # We'll just say it's active.
-            pass
+            # Stateless 10s redispatch logic:
+            if alert.alerted_at:
+                delta = (datetime.now(timezone.utc) - alert.alerted_at.replace(tzinfo=timezone.utc)).total_seconds()
+                if delta > 300:
+                    alert.status = "cancelled_by_citizen"
+                    alert.cancellation_reason = "timeout"
+                    alert.cancelled_by = "citizen"
+                    alert.resolved_at = func.now()
+                    await db.flush()
+                    response["status"] = alert.status
+                    response["cancellation_reason"] = "timeout"
+                    response["cancelled_by"] = "citizen"
+                elif int(delta) % 10 < 5:
+                    # Trigger dispatch again (max once per 10s block)
+                    await trigger_dispatch(alert.id, db)
 
     return response@router.patch("/alerts/{alert_id}/resolve", summary="Resolve an SOS alert")
 async def resolve_alert(alert_id: int, payload: Optional[ResolveRequest] = None, db: AsyncSession = Depends(get_db)):
@@ -245,7 +264,7 @@ async def mark_false_alarm(alert_id: int, payload: Optional[ResolveRequest] = No
 
 
 @router.post("/alerts/{alert_id}/cancel", summary="Citizen cancels their own SOS within the grace period")
-async def cancel_sos_alert(alert_id: int, db: AsyncSession = Depends(get_db)):
+async def cancel_sos_alert(alert_id: int, payload: Optional[CitizenCancelRequest] = None, db: AsyncSession = Depends(get_db)):
     """
     Called by the citizen app when the user taps Cancel within 10 seconds.
     Sets the alert to 'cancelled' and releases any assigned officers back to available.
@@ -256,10 +275,12 @@ async def cancel_sos_alert(alert_id: int, db: AsyncSession = Depends(get_db)):
     alert = result.scalar_one_or_none()
     if not alert:
         raise HTTPException(404, f"Alert {alert_id} not found")
-    if alert.status != "active":
+    if alert.status not in ["active", "cancelled", "cancelled_by_citizen"]:
         raise HTTPException(400, f"Alert {alert_id} is already {alert.status}")
 
-    alert.status = "cancelled"
+    alert.status = "cancelled_by_citizen"
+    alert.cancellation_reason = payload.reason if payload and payload.reason else "user_cancelled"
+    alert.cancelled_by = "citizen"
     alert.resolved_at = func.now()
 
     # Release any officers assigned to this dispatch
@@ -269,11 +290,40 @@ async def cancel_sos_alert(alert_id: int, db: AsyncSession = Depends(get_db)):
             _officer_alert_map.pop(oid, None)
 
     db.add(AppLog(
-        event_type="SOS_CANCELLED",
-        log_metadata=json.dumps({"alert_id": alert_id, "reason": "citizen_cancelled_within_grace_period"})
+        event_type="SOS_CANCELLED_BY_CITIZEN",
+        log_metadata=json.dumps({"alert_id": alert_id, "reason": alert.cancellation_reason})
     ))
 
     return {"status": "ok", "alert_id": alert_id, "message": "SOS cancelled. Officers have been stood down."}
+
+@router.post("/alerts/{alert_id}/police-cancel", summary="Police cancels an SOS or Backup alert")
+async def police_cancel_alert(alert_id: int, payload: PoliceCancelRequest, db: AsyncSession = Depends(get_db)):
+    from app.routers.dispatch import _active_dispatches, _officer_alert_map, _accepted_dispatches
+
+    result = await db.execute(select(SOSAlert).where(SOSAlert.id == alert_id))
+    alert = result.scalar_one_or_none()
+    if not alert:
+        raise HTTPException(404, f"Alert {alert_id} not found")
+
+    alert.status = "cancelled_by_police"
+    alert.cancellation_reason = payload.reason
+    alert.cancellation_details = payload.details
+    alert.cancelled_by = "police"
+    alert.resolved_at = func.now()
+
+    dispatch_info = _active_dispatches.pop(alert_id, None)
+    if dispatch_info:
+        for oid in dispatch_info.get("officer_ids", []):
+            _officer_alert_map.pop(oid, None)
+            
+    _accepted_dispatches.pop(alert_id, None)
+
+    db.add(AppLog(
+        event_type="SOS_CANCELLED_BY_POLICE",
+        log_metadata=json.dumps({"alert_id": alert_id, "reason": payload.reason})
+    ))
+
+    return {"status": "ok", "alert_id": alert_id, "message": "Alert cancelled by police."}
 
 
 @router.post("/alerts/{alert_id}/location-update", summary="Suggest location change mid-dispatch")

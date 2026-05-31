@@ -14,4 +14,15 @@ backend/uploads/
 # Ignore unrelated large folders/archives
 E-commerce-Complete-Flutter-UI-master/
 E-commerce-Complete-Flutter-UI-master.zip
+backend/seed_cloud_data.py
+**/__pycache__/
+**/*.pyc
+*.env
+*.env.*
+!*.env.example
+kisanths_model/
+RoadSOS_SourceCode.zip
 apk/
+*.exe
+google-services.json
+

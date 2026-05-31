@@ -8,6 +8,7 @@ import 'package:dio/dio.dart';
 
 import '../../core/theme/app_theme.dart';
 import '../../features/dispatch/dispatch_provider.dart';
+import '../../core/models/dispatch.dart';
 
 class MainMapScreen extends ConsumerStatefulWidget {
   const MainMapScreen({super.key});
@@ -111,14 +112,100 @@ class _MainMapScreenState extends ConsumerState<MainMapScreen> with SingleTicker
   }
 
   void _requestBackup() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Backup requested successfully.'), backgroundColor: kAccentBlue),
+    // Show confirmation modal
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: Theme.of(context).brightness == Brightness.dark ? kDarkSurface : kLightSurface,
+        title: Text('REQUEST BACKUP?', style: AppTheme.monoMd.copyWith(color: kAccentBlue)),
+        content: const Text('Broadcast an urgent backup request to all nearby officers?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('CANCEL', style: TextStyle(color: Colors.grey))),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              ref.read(dispatchProvider.notifier).requestBackup(null);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Backup request broadcasted securely.'), backgroundColor: kAccentBlue),
+              );
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: kAccentBlue),
+            child: const Text('BROADCAST', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
     );
   }
 
-  void _callAmbulance() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Ambulance dispatched to location.'), backgroundColor: kAccentAmber),
+  void _showCancelAlertOptions(int alertId) {
+    String? selectedReason;
+    final TextEditingController detailsController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              backgroundColor: Theme.of(context).brightness == Brightness.dark ? kDarkSurface : kLightSurface,
+              title: const Text('Cancel Alert', style: TextStyle(color: kAccentRed, fontWeight: FontWeight.bold)),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('Select reason for cancellation:'),
+                  const SizedBox(height: 8),
+                  DropdownButtonFormField<String>(
+                    decoration: const InputDecoration(border: OutlineInputBorder()),
+                    items: const [
+                      DropdownMenuItem(value: 'false_alarm', child: Text('False Alarm')),
+                      DropdownMenuItem(value: 'resolved_on_scene', child: Text('Resolved on scene')),
+                      DropdownMenuItem(value: 'duplicate_alert', child: Text('Duplicate alert')),
+                      DropdownMenuItem(value: 'other', child: Text('Other')),
+                    ],
+                    onChanged: (val) {
+                      setState(() {
+                        selectedReason = val;
+                      });
+                    },
+                    value: selectedReason,
+                    hint: const Text('Reason'),
+                  ),
+                  if (selectedReason == 'other') ...[
+                    const SizedBox(height: 16),
+                    TextField(
+                      controller: detailsController,
+                      decoration: const InputDecoration(
+                        border: OutlineInputBorder(),
+                        hintText: 'Enter details (required)',
+                      ),
+                      onChanged: (v) => setState(() {}),
+                      maxLines: 2,
+                    ),
+                  ],
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: const Text('BACK'),
+                ),
+                ElevatedButton(
+                  onPressed: (selectedReason != null && (selectedReason != 'other' || detailsController.text.isNotEmpty))
+                      ? () {
+                          Navigator.pop(ctx);
+                          final reason = selectedReason == 'other' ? detailsController.text : selectedReason!;
+                          ref.read(dispatchProvider.notifier).cancelDispatchByPolice(reason, detailsController.text);
+                        }
+                      : null,
+                  style: ElevatedButton.styleFrom(backgroundColor: kAccentRed),
+                  child: const Text('CONFIRM CANCEL', style: TextStyle(color: Colors.white)),
+                ),
+              ],
+            );
+          }
+        );
+      },
     );
   }
 
@@ -134,9 +221,11 @@ class _MainMapScreenState extends ConsumerState<MainMapScreen> with SingleTicker
     final status = ref.watch(dispatchProvider);
     final isNavigating = status is Navigating;
     
+    DispatchModel? dispatch;
     LatLng? destination;
     if (isNavigating) {
-      destination = LatLng(status.dispatch.latitude, status.dispatch.longitude);
+      dispatch = status.dispatch;
+      destination = LatLng(dispatch.latitude, dispatch.longitude);
       if (_routePoints.isEmpty && !_isLoadingRoute) {
         _loadRoute(destination);
       }
@@ -178,8 +267,10 @@ class _MainMapScreenState extends ConsumerState<MainMapScreen> with SingleTicker
               ),
               children: [
                 TileLayer(
-                  urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                  urlTemplate: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+                  subdomains: const ['a', 'b', 'c', 'd'],
                   userAgentPackageName: 'com.roadsos.officer',
+                  retinaMode: MediaQuery.of(context).devicePixelRatio > 1.0,
                 ),
                 if (_routePoints.isNotEmpty)
                   PolylineLayer(
@@ -244,30 +335,138 @@ class _MainMapScreenState extends ConsumerState<MainMapScreen> with SingleTicker
           else
             const Center(child: CircularProgressIndicator()),
 
-          // Action Buttons (Backup, Ambulance) when navigating
+          // Action Buttons (Backup) when navigating
           if (isNavigating)
             Positioned(
               right: 16,
-              bottom: 32,
-              child: Column(
-                children: [
-                  FloatingActionButton(
-                    heroTag: 'backup_btn',
-                    onPressed: _requestBackup,
-                    backgroundColor: surfaceColor,
-                    child: const Icon(Icons.local_police, color: kAccentBlue),
-                  ),
-                  const SizedBox(height: 16),
-                  FloatingActionButton(
-                    heroTag: 'ambulance_btn',
-                    onPressed: _callAmbulance,
-                    backgroundColor: surfaceColor,
-                    child: const Icon(Icons.medical_services, color: kAccentRed),
-                  ),
-                ],
+              bottom: dispatch?.type == 'officer_backup' ? 100 : 300, // adjust based on panel height
+              child: FloatingActionButton(
+                heroTag: 'backup_btn',
+                onPressed: _requestBackup,
+                backgroundColor: surfaceColor,
+                child: const Icon(Icons.local_police, color: kAccentBlue),
               ),
             ),
+            
+          // Incident Details Panel
+          if (isNavigating && dispatch != null)
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: _buildIncidentDetailsPanel(dispatch),
+            ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildIncidentDetailsPanel(DispatchModel dispatch) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bgColor = isDark ? kDarkSurface : kLightSurface;
+    final textColor = isDark ? kDarkText : kLightText;
+    final mutedColor = isDark ? kDarkMuted : kLightMuted;
+    
+    return Container(
+      decoration: BoxDecoration(
+        color: bgColor,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 10, offset: Offset(0, -2))],
+      ),
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Drag handle
+              Center(child: Container(width: 40, height: 4, decoration: BoxDecoration(color: isDark ? Colors.white24 : Colors.black26, borderRadius: BorderRadius.circular(2)))),
+              const SizedBox(height: 16),
+              
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(dispatch.type == 'officer_backup' ? 'OFFICER BACKUP' : 'INCIDENT DETAILS', style: AppTheme.monoMd.copyWith(color: dispatch.type == 'officer_backup' ? kAccentBlue : kAccentRed, fontWeight: FontWeight.bold)),
+                  if (dispatch.reporters.length > 1)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(color: kAccentAmber.withOpacity(0.2), borderRadius: BorderRadius.circular(12)),
+                      child: Text('${dispatch.reporters.length} REPORTS COMBINED', style: AppTheme.monoSm.copyWith(color: kAccentAmber, fontWeight: FontWeight.bold)),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              
+              Text(dispatch.type == 'officer_backup' ? 'REQUESTING OFFICER' : 'REPORTERS', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: mutedColor)),
+              const SizedBox(height: 8),
+              if (dispatch.type == 'officer_backup')
+                Chip(
+                  avatar: const Icon(Icons.local_police, size: 16, color: kAccentBlue),
+                  label: Text(dispatch.officerName ?? 'Unknown Officer', style: TextStyle(color: textColor, fontSize: 12)),
+                  backgroundColor: kAccentBlue.withOpacity(0.1),
+                  side: BorderSide.none,
+                )
+              else
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: dispatch.reporters.isEmpty 
+                    ? [Chip(label: const Text('Anonymous'), backgroundColor: isDark ? kDarkBg : kLightBg, side: BorderSide.none)]
+                    : dispatch.reporters.map((r) => Chip(
+                        avatar: const Icon(Icons.person, size: 16),
+                        label: Text(r, style: TextStyle(color: textColor, fontSize: 12)),
+                        backgroundColor: isDark ? kDarkBg : kLightBg,
+                        side: BorderSide.none,
+                      )).toList(),
+                ),
+              
+              if (dispatch.photos.isNotEmpty) ...[
+                const SizedBox(height: 16),
+                Text('ATTACHED PHOTOS', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: mutedColor)),
+                const SizedBox(height: 8),
+                SizedBox(
+                  height: 80,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: dispatch.photos.length,
+                    itemBuilder: (context, index) {
+                      return Container(
+                        margin: const EdgeInsets.only(right: 12),
+                        width: 80,
+                        decoration: BoxDecoration(
+                          color: kDarkMuted,
+                          borderRadius: BorderRadius.circular(8),
+                          image: DecorationImage(
+                            image: NetworkImage(dispatch.photos[index]),
+                            fit: BoxFit.cover,
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+              
+              const SizedBox(height: 16),
+              
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () => _showCancelAlertOptions(dispatch.alertId),
+                  icon: const Icon(Icons.cancel, color: Colors.white),
+                  label: const Text('CANCEL ALERT', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: kAccentRed, 
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                )
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:provider/provider.dart';
 import '../../core/theme/app_theme.dart';
+import '../../services/auth_service.dart';
 import 'otp_screen.dart';
+import 'splash_screen.dart';
 
 class PhoneVerifyScreen extends StatefulWidget {
   const PhoneVerifyScreen({super.key});
@@ -12,13 +15,37 @@ class PhoneVerifyScreen extends StatefulWidget {
 
 class _PhoneVerifyScreenState extends State<PhoneVerifyScreen> {
   final _phoneController = TextEditingController();
+  final _countryCodeController = TextEditingController(text: '+91');
   bool _isLoading = false;
 
   Future<void> _sendCode() async {
-    if (_phoneController.text.trim().length < 10) return;
+    final phoneRaw = _phoneController.text.trim();
+    final countryCode = _countryCodeController.text.trim();
+    if (phoneRaw.length < 10) return;
+
+    // Developer Bypass for free testing without Firebase Billing
+    final bypassAccounts = {
+      '0000000001': 'Ezhil',
+      '0000000002': 'Naveen',
+      '0000000003': 'Kisanth',
+      '0000000004': 'Vishal',
+      '0000000005': 'Abhinav',
+      '0000000006': 'Loknath',
+    };
+
+    if (bypassAccounts.containsKey(phoneRaw)) {
+      setState(() => _isLoading = true);
+      await Future.delayed(const Duration(milliseconds: 500));
+      if (!mounted) return;
+      final auth = Provider.of<AuthService>(context, listen: false);
+      await auth.completeVerification(bypassAccounts[phoneRaw]!, "$countryCode$phoneRaw");
+      if (!mounted) return;
+      Navigator.pushReplacement(context, MaterialPageRoute(builder: (_) => const SplashScreen()));
+      return;
+    }
+
     setState(() => _isLoading = true);
-    
-    final phone = "+91${_phoneController.text.trim()}";
+    final phone = "$countryCode$phoneRaw";
     
     await FirebaseAuth.instance.verifyPhoneNumber(
       phoneNumber: phone,
@@ -52,19 +79,38 @@ class _PhoneVerifyScreenState extends State<PhoneVerifyScreen> {
               const SizedBox(height: 8),
               Text('Secure one-time login for emergency services', textAlign: TextAlign.center, style: TextStyle(fontSize: 14, color: Colors.grey.shade400)),
               const SizedBox(height: 48),
-              TextField(
-                controller: _phoneController,
-                keyboardType: TextInputType.phone,
-                style: const TextStyle(color: Colors.white, fontSize: 18),
-                decoration: InputDecoration(
-                  labelText: 'Phone Number',
-                  prefixText: '+91 ',
-                  labelStyle: TextStyle(color: Colors.grey.shade500),
-                  filled: true,
-                  fillColor: AppTheme.surfaceDark,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                  prefixIcon: const Icon(Icons.phone, color: AppTheme.primaryRed),
-                ),
+              Row(
+                children: [
+                  SizedBox(
+                    width: 75,
+                    child: TextField(
+                      controller: _countryCodeController,
+                      keyboardType: TextInputType.phone,
+                      style: const TextStyle(color: Colors.white, fontSize: 18),
+                      decoration: InputDecoration(
+                        filled: true,
+                        fillColor: AppTheme.surfaceDark,
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: TextField(
+                      controller: _phoneController,
+                      keyboardType: TextInputType.phone,
+                      style: const TextStyle(color: Colors.white, fontSize: 18),
+                      decoration: InputDecoration(
+                        labelText: 'Phone Number',
+                        labelStyle: TextStyle(color: Colors.grey.shade500),
+                        filled: true,
+                        fillColor: AppTheme.surfaceDark,
+                        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
+                        prefixIcon: const Icon(Icons.phone, color: AppTheme.primaryRed),
+                      ),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 24),
               ElevatedButton(

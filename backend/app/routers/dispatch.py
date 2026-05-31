@@ -6,7 +6,7 @@ from sqlalchemy.sql import func
 from app.utils.database import get_db
 from app.utils.geo import haversine_km
 from app.models.db_models import Officer, SOSAlert, DeviceTrust, AppLog
-from app.models.schemas import LocationPing, DispatchResponse
+from app.models.schemas import LocationPing, DispatchResponse, OfficerBackupRequest
 from typing import Optional, List
 import json
 
@@ -62,6 +62,8 @@ async def poll_dispatch(officer_id: int, db: AsyncSession = Depends(get_db)):
                 "location_update_pending": alert.location_update_pending,
                 "new_lat": alert.new_lat,
                 "new_lng": alert.new_lng,
+                "type": alert.alert_type,
+                "requester_id": alert.requester_id,
             }
         }
     else:
@@ -177,3 +179,35 @@ async def _find_and_assign_officers(alert_id: int, db: AsyncSession):
 async def trigger_dispatch(alert_id: int, db: AsyncSession = Depends(get_db)):
     """Called by the SOS endpoint to find the nearest available officer."""
     return await _find_and_assign_officers(alert_id, db)
+
+@router.post("/officers/{officer_id}/backup", summary="Officer requests backup")
+async def request_backup(officer_id: int, payload: OfficerBackupRequest, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(Officer).where(Officer.id == officer_id))
+    officer = result.scalar_one_or_none()
+    if not officer:
+        raise HTTPException(404, "Officer not found")
+        
+    alert = SOSAlert(
+        latitude=payload.latitude,
+        longitude=payload.longitude,
+        severity="critical",
+        message=payload.message or f"Officer {officer.badge_number} needs backup!",
+        alert_type="officer_backup",
+        requester_id=officer_id,
+        status="active"
+    )
+    db.add(alert)
+    db.add(AppLog(
+        event_type="OFFICER_BACKUP_REQUESTED",
+        log_metadata=json.dumps({"officer_id": officer_id, "lat": payload.latitude, "lng": payload.longitude})
+    ))
+    
+    await db.flush()
+    await db.refresh(alert)
+    
+    dispatch_res = await _find_and_assign_officers(alert.id, db)
+    return {
+        "status": "ok",
+        "alert_id": alert.id,
+        "dispatch_status": dispatch_res
+    }

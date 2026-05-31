@@ -1,5 +1,6 @@
 """OSM Overpass service — fetches nearby POIs from OpenStreetMap."""
 import httpx
+import asyncio
 from typing import List, Dict, Any
 from app.utils.geo import haversine_km
 
@@ -42,13 +43,24 @@ async def fetch_nearby_from_osm(
 out center 30;
 """
 
-    resp = await _overpass_client.post(
-        OVERPASS_URL,
-        data={"data": query},
-        headers={"Content-Type": "application/x-www-form-urlencoded"},
-    )
-    resp.raise_for_status()
-    data = resp.json()
+    data = {}
+    for attempt in range(2):
+        try:
+            resp = await _overpass_client.post(
+                OVERPASS_URL,
+                data={"data": query},
+                headers={
+                    "Content-Type": "application/x-www-form-urlencoded",
+                    "User-Agent": "RoadSOS-App/1.0"
+                },
+            )
+            resp.raise_for_status()
+            data = resp.json()
+            break
+        except (httpx.HTTPStatusError, httpx.TimeoutException, httpx.RequestError) as e:
+            if attempt == 1:
+                raise e
+            await asyncio.sleep(1)
 
     results: List[Dict[str, Any]] = []
     for el in data.get("elements", []):

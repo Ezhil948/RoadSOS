@@ -5,31 +5,24 @@ RoadSOS is an emergency road safety application built with **Flutter** (Frontend
 
 ## 🚀 Progress & Current State (Where we left off)
 1. **Frontend (Flutter)**
-   - Converted the app to compile as a native Android APK (`flutter build apk --target-platform android-arm64`) to solve web-based geolocation and CanvasKit rendering issues.
-   - Fixed text visibility issues in Dark Mode across `home_screen.dart` and `accident_report_screen.dart` by adding theme-aware backgrounds and borders.
-   - Polished the **Emergency SOS Button**:
-     - Reduced size to `90px` height.
-     - Replaced uniform scaling with an asymmetric `AnimatedBuilder` stretch (4% vertical, 3% horizontal).
-     - Adjusted timing to a slow, calm 800ms pulse loop.
-     - Added horizontal padding so it doesn't overflow the screen edges.
-   - Emergency calling features (`tel:112`, etc.) are currently mocked with simulated `AlertDialog` popups for safe testing without dialing real emergency numbers.
+   - **Citizen App (`RoadSOS_Citizen_v3.3`)**: Fully functional. App icon and branding remain open for updates. Native Android arm64 APKs have been generated.
+   - **Officer Mobile App (`RoadSOS_Officer_v3.3`)**: Built completely from scratch using Riverpod, GoRouter, and a strict Git-CLI dark-theme aesthetic. Features a Dispatch Polling Engine, Navigation map (with OSRM routing), and full dispatch resolution states.
 
 2. **Backend (Python FastAPI)**
    - Running successfully on local network `0.0.0.0:8000`.
-   - The Flutter app's `AppConstants.baseUrl` is pointed to the host machine's Wi-Fi IP (`http://10.82.59.177:8000`) so the physical phone (Vivo 300) can connect to it over hotspot.
+   - **Security Hardening**: Implemented `RateLimitMiddleware` (100 req/min), `RequestBodySizeLimitMiddleware` (max 15MB for images), and strict Pydantic payload constraints to prevent buffer overflows.
+   - **Officer Authentication**: Upgraded from MVP auto-registration to strict password hashing (`hashlib` PBKDF2). Inserted 5 default officer accounts.
+   - **Workspace**: Massive cleanup performed; old unneeded Flutter source folders were deleted to free up memory.
 
 ## 🔮 Future Goals & Next Steps
 1. **App Name Rebranding**:
    - The current placeholder name is "RoadSOS", but **this is NOT fixed**.
    - **Next Step**: Generate a few modern, professional app name ideas (e.g., Aegis, SwiftSave, ResQDrive) and update the project once a final name is chosen.
-2. **App Icon Implementation**:
-   - The user has generated a custom app icon.
-   - **Next Step**: Crop the raw image perfectly square, save it as `assets/icon.png`, and use the `flutter_launcher_icons` package to generate the native Android/iOS icons.
-3. **Real AI Integration**:
+2. **Real AI Integration**:
    - The accident report screen currently uses a mocked 2-second delay to simulate AI image analysis.
    - **Next Step**: Connect the FastAPI backend to an actual Vision AI model (like Gemini Pro Vision or OpenAI) to analyze the uploaded accident photos in real time.
-4. **Database & Dashboard**:
-   - Build a web dashboard for the "Control Room" so responders can see incoming SOS alerts and live GPS pins on a map.
+3. **Database & Dashboard**:
+   - Build a web dashboard for the "Control Room" so central dispatchers can see incoming SOS alerts, officer locations, and live GPS pins on a map.
 
 ## 💻 Key Code Snippets (For AI Context)
 

@@ -9,10 +9,10 @@ import 'core/theme/theme_provider.dart';
 // Import screens
 import 'features/auth/login_screen.dart';
 import 'features/home/home_screen.dart';
-import 'features/history/history_screen.dart';
-import 'features/notifications/notifications_screen.dart';
+import 'features/calendar/calendar_screen.dart';
 import 'features/profile/profile_screen.dart';
 import 'features/settings/settings_screen.dart';
+import 'features/history/history_screen.dart';
 import 'features/dispatch/resolution_screen.dart';
 import 'features/dispatch/dispatch_provider.dart';
 import 'features/map/main_map_screen.dart';
@@ -67,10 +67,10 @@ final routerProvider = Provider<GoRouter>((ref) {
                     initialLocation: index == navigationShell.currentIndex,
                   ),
                   items: const [
-                    BottomNavigationBarItem(icon: Icon(Icons.terminal_rounded), label: 'Home'),
+                    BottomNavigationBarItem(icon: Icon(Icons.shield_outlined), label: 'Duty'),
                     BottomNavigationBarItem(icon: Icon(Icons.map_rounded), label: 'Map'),
-                    BottomNavigationBarItem(icon: Icon(Icons.calendar_month), label: 'History'),
-                    BottomNavigationBarItem(icon: Icon(Icons.notifications_outlined), label: 'Alerts'),
+                    BottomNavigationBarItem(icon: Icon(Icons.history_rounded), label: 'History'),
+                    BottomNavigationBarItem(icon: Icon(Icons.calendar_month_rounded), label: 'Calendar'),
                     BottomNavigationBarItem(icon: Icon(Icons.person_outline), label: 'Profile'),
                   ],
                 ),
@@ -83,7 +83,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           StatefulShellBranch(routes: [
             GoRoute(
               path: '/',
-              builder: (context, state) => HomeScreen(),
+              builder: (context, state) => const HomeScreen(),
             ),
           ]),
           StatefulShellBranch(routes: [
@@ -95,19 +95,19 @@ final routerProvider = Provider<GoRouter>((ref) {
           StatefulShellBranch(routes: [
             GoRoute(
               path: '/history',
-              builder: (context, state) => HistoryScreen(),
+              builder: (context, state) => const HistoryScreen(),
             ),
           ]),
           StatefulShellBranch(routes: [
             GoRoute(
-              path: '/notifications',
-              builder: (context, state) => NotificationsScreen(),
+              path: '/calendar',
+              builder: (context, state) => const CalendarScreen(),
             ),
           ]),
           StatefulShellBranch(routes: [
             GoRoute(
               path: '/profile',
-              builder: (context, state) => ProfileScreen(),
+              builder: (context, state) => const ProfileScreen(),
             ),
           ]),
         ],

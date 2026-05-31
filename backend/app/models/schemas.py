@@ -32,6 +32,18 @@ class SOSResponse(BaseModel):
 class ResolveRequest(BaseModel):
     officer_notes: Optional[str] = Field(None, max_length=1000)
 
+class CitizenCancelRequest(BaseModel):
+    reason: Optional[str] = None
+
+class PoliceCancelRequest(BaseModel):
+    reason: str = Field(..., max_length=100)
+    details: Optional[str] = Field(None, max_length=1000)
+
+class OfficerBackupRequest(BaseModel):
+    latitude: float
+    longitude: float
+    message: Optional[str] = None
+
 
 # ── Accident Reports ───────────────────────────────────────
 class StatusUpdate(BaseModel):

@@ -11,6 +11,7 @@ import '../../core/network/api_client.dart';
 import '../../core/network/api_endpoints.dart';
 import '../../widgets/components.dart';
 import '../../widgets/stat_row.dart';
+import '../dispatch/dispatch_provider.dart';
 
 class ProfileScreen extends ConsumerStatefulWidget {
   const ProfileScreen({super.key});
@@ -164,22 +165,255 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> with SingleTicker
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+  Widget _buildIdentityCard() {
+    final box = Hive.box('settings');
+    final officerName = box.get('officer_name', defaultValue: 'Officer').toString().toUpperCase();
+    final badgeNumber = box.get('badge_number', defaultValue: '----').toString();
+    final initial = officerName.isNotEmpty ? officerName[0] : 'O';
     
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final surfaceColor = isDark ? kDarkSurface : kLightSurface;
+    final borderColor = isDark ? kDarkBorder : kLightBorder;
     final bgColor = isDark ? kDarkBg : kLightBg;
+    
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: surfaceColor,
+        border: Border.all(color: borderColor),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              border: Border.all(color: kAccentGreen, width: 2),
+              shape: BoxShape.circle,
+              color: bgColor,
+            ),
+            alignment: Alignment.center,
+            child: Text(
+              initial,
+              style: AppTheme.monoMd.copyWith(color: kAccentGreen, fontWeight: FontWeight.bold, fontSize: 18),
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  officerName,
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+                const SizedBox(height: 4),
+                Text('Badge #$badgeNumber', style: AppTheme.monoSm.copyWith(color: isDark ? kDarkSubtext : kLightSubtext)),
+                const SizedBox(height: 2),
+                Row(
+                  children: [
+                    Container(
+                      width: 8, height: 8,
+                      decoration: const BoxDecoration(color: kAccentGreen, shape: BoxShape.circle),
+                    ),
+                    const SizedBox(width: 6),
+                    Text('ONLINE', style: AppTheme.monoSm.copyWith(color: kAccentGreen, fontSize: 11, fontWeight: FontWeight.bold)),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDutyStatus(OfficerStatus status) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     final surfaceColor = isDark ? kDarkSurface : kLightSurface;
     final borderColor = isDark ? kDarkBorder : kLightBorder;
     final textColor = isDark ? kDarkText : kLightText;
-    final subtextColor = isDark ? kDarkSubtext : kLightSubtext;
     final mutedColor = isDark ? kDarkMuted : kLightMuted;
+    
+    String statusText;
+    Color statusColor;
+    
+    if (status is Online) {
+      statusText = 'ONLINE';
+      statusColor = kAccentGreen;
+    } else if (status is Navigating) {
+      statusText = 'EN ROUTE';
+      statusColor = kAccentBlue;
+    } else if (status is Arrived) {
+      statusText = 'ON SCENE';
+      statusColor = kAccentAmber;
+    } else if (status is Dispatching) {
+      statusText = 'INCOMING';
+      statusColor = kAccentRed;
+    } else {
+      statusText = 'OFFLINE';
+      statusColor = mutedColor;
+    }
+    
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: surfaceColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: borderColor),
+      ),
+      child: Row(
+        children: [
+          // Current status indicator
+          Expanded(
+            child: Column(
+              children: [
+                Container(
+                  width: 12, height: 12,
+                  decoration: BoxDecoration(
+                    color: statusColor,
+                    shape: BoxShape.circle,
+                    boxShadow: [BoxShadow(color: statusColor.withOpacity(0.4), blurRadius: 8)],
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(statusText, style: TextStyle(color: statusColor, fontSize: 12, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 2),
+                Text('Status', style: TextStyle(color: mutedColor, fontSize: 10)),
+              ],
+            ),
+          ),
+          Container(width: 1, height: 40, color: borderColor),
+          // Dispatches today
+          Expanded(
+            child: Column(
+              children: [
+                Text('—', style: TextStyle(color: textColor, fontSize: 18, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 4),
+                Text('Dispatches', style: TextStyle(color: mutedColor, fontSize: 10)),
+              ],
+            ),
+          ),
+          Container(width: 1, height: 40, color: borderColor),
+          // Resolve rate
+          Expanded(
+            child: Column(
+              children: [
+                Text('—', style: TextStyle(color: textColor, fontSize: 18, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 4),
+                Text('Resolved', style: TextStyle(color: mutedColor, fontSize: 10)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmergencySOS() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final surfaceColor = isDark ? kDarkSurface : kLightSurface;
+    final borderColor = isDark ? kDarkBorder : kLightBorder;
+    final mutedColor = isDark ? kDarkMuted : kLightMuted;
+    
+    return GestureDetector(
+      onTapDown: (_) => _startPanicHold(),
+      onTapUp: (_) => _cancelPanicHold(),
+      onTapCancel: () => _cancelPanicHold(),
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: _panicHoldProgress > 0
+              ? kAccentRed.withOpacity(0.05 + (_panicHoldProgress * 0.15))
+              : surfaceColor,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: _panicHoldProgress > 0 ? kAccentRed.withOpacity(0.5) : borderColor,
+          ),
+        ),
+        child: Column(
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.sos_rounded, color: kAccentRed, size: 24),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'OFFICER DISTRESS SIGNAL',
+                        style: TextStyle(color: kAccentRed, fontSize: 13, fontWeight: FontWeight.bold, letterSpacing: 0.5),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Hold for 3 seconds to alert station',
+                        style: TextStyle(color: mutedColor, fontSize: 11),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            // Progress bar
+            ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: LinearProgressIndicator(
+                value: _panicHoldProgress,
+                minHeight: 6,
+                backgroundColor: isDark ? kDarkBorder : kLightBorder,
+                color: kAccentRed,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQuickActions() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final borderColor = isDark ? kDarkBorder : kLightBorder;
+    final textColor = isDark ? kDarkText : kLightText;
+    final mutedColor = isDark ? kDarkMuted : kLightMuted;
+    return Column(
+      children: [
+        ListTile(
+          leading: Icon(Icons.settings_outlined, color: textColor),
+          title: Text('Settings', style: TextStyle(color: textColor)),
+          trailing: Icon(Icons.chevron_right, color: mutedColor),
+          onTap: () => context.push('/settings'),
+        ),
+        Divider(color: borderColor),
+        ListTile(
+          leading: Icon(Icons.lock_outline, color: textColor),
+          title: Text('Change Password', style: TextStyle(color: textColor)),
+          trailing: Icon(Icons.chevron_right, color: mutedColor),
+          onTap: _showChangePasswordModal,
+        ),
+        Divider(color: borderColor),
+        ListTile(
+          leading: const Icon(Icons.logout, color: kAccentRed),
+          title: const Text('Log Out', style: TextStyle(color: kAccentRed, fontWeight: FontWeight.bold)),
+          onTap: _logout,
+        ),
+      ],
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final bgColor = isDark ? kDarkBg : kLightBg;
+    final status = ref.watch(dispatchProvider);
 
     return Scaffold(
       backgroundColor: bgColor,
       body: SafeArea(
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Panic SOS banner
             if (_panicActive)
@@ -224,173 +458,22 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> with SingleTicker
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const SectionHeader(title: 'OFFICER PROFILE'),
-
-                    // Header Card with Long Press Hexagon Avatar
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: surfaceColor,
-                        border: Border.all(color: borderColor),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        children: [
-                          GestureDetector(
-                            onTapDown: (_) => _startPanicHold(),
-                            onTapUp: (_) => _cancelPanicHold(),
-                            onTapCancel: () => _cancelPanicHold(),
-                            child: Stack(
-                              alignment: Alignment.center,
-                              children: [
-                                // Circular progress surrounding avatar
-                                SizedBox(
-                                  width: 68,
-                                  height: 68,
-                                  child: CircularProgressIndicator(
-                                    value: _panicHoldProgress,
-                                    color: kAccentRed,
-                                    backgroundColor: Colors.transparent,
-                                    strokeWidth: 4,
-                                  ),
-                                ),
-                                // Hexagon Monogram RS
-                                Container(
-                                  width: 56,
-                                  height: 56,
-                                  decoration: BoxDecoration(
-                                    border: Border.all(
-                                      color: _panicHoldProgress > 0 ? kAccentRed : kAccentGreen,
-                                      width: 2,
-                                    ),
-                                    shape: BoxShape.circle,
-                                    color: bgColor,
-                                  ),
-                                  alignment: Alignment.center,
-                                  child: Text(
-                                    'RS',
-                                    style: AppTheme.monoMd.copyWith(
-                                      color: _panicHoldProgress > 0 ? kAccentRed : kAccentGreen,
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 18,
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'SGT. RAJAN KUMAR',
-                                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold, fontSize: 16),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  'Badge #4821 · Chennai Central',
-                                  style: AppTheme.monoSm.copyWith(color: subtextColor),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  'Joined: March 2021',
-                                  style: AppTheme.monoSm.copyWith(color: mutedColor, fontSize: 11),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Center(
-                      child: Text(
-                        '(Hold avatar for 3s to trigger distress SOS)',
-                        style: AppTheme.monoSm.copyWith(color: mutedColor, fontSize: 10),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-
-                    const SectionHeader(title: 'CAREER STATS'),
-                    StatRow(icon: Icons.assignment_outlined, label: 'Total dispatches', value: '847'),
-                    StatRow(icon: Icons.speed, label: 'Avg response time', value: '5m 14s'),
-                    StatRow(icon: Icons.done_all, label: 'Resolution rate', value: '94.2%'),
-                    StatRow(icon: Icons.star_border, label: 'Current rating', value: '4.92 ★'),
-                    StatRow(icon: Icons.report_problem_outlined, label: 'False alarm flags', value: '3'),
+                    _buildIdentityCard(),
                     
-                    const SizedBox(height: 32),
-                    const SectionHeader(title: '7-DAY SHIFT HISTORY (Dispatches)'),
-
-                    // Chart
-                    Container(
-                      height: 160,
-                      padding: const EdgeInsets.symmetric(horizontal: 8),
-                      child: BarChart(
-                        BarChartData(
-                          alignment: BarChartAlignment.spaceAround,
-                          maxY: 8,
-                          barTouchData: BarTouchData(enabled: false),
-                          titlesData: FlTitlesData(
-                            show: true,
-                            bottomTitles: AxisTitles(
-                              sideTitles: SideTitles(
-                                showTitles: true,
-                                getTitlesWidget: (val, meta) {
-                                  final days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-                                  if (val >= 0 && val < 7) {
-                                    return Text(days[val.toInt()], style: AppTheme.monoSm.copyWith(color: subtextColor, fontSize: 10));
-                                  }
-                                  return const Text('');
-                                },
-                              ),
-                            ),
-                            leftTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                            topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                            rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                          ),
-                          gridData: const FlGridData(show: false),
-                          borderData: FlBorderData(show: false),
-                          barGroups: [
-                            _buildBarGroup(0, 3, isDark),
-                            _buildBarGroup(1, 5, isDark),
-                            _buildBarGroup(2, 4, isDark),
-                            _buildBarGroup(3, 2, isDark),
-                            _buildBarGroup(4, 6, isDark),
-                            _buildBarGroup(5, 1, isDark),
-                            _buildBarGroup(6, 4, isDark),
-                          ],
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 32),
+                    const SizedBox(height: 20),
+                    
+                    const SectionHeader(title: 'DUTY STATUS'),
+                    _buildDutyStatus(status),
+                    
+                    const SizedBox(height: 20),
+                    
+                    const SectionHeader(title: 'EMERGENCY'),
+                    _buildEmergencySOS(),
+                    
+                    const SizedBox(height: 20),
+                    
                     const SectionHeader(title: 'QUICK ACTIONS'),
-
-                    // Settings Link
-                    ListTile(
-                      leading: Icon(Icons.settings_outlined, color: textColor),
-                      title: Text('Settings', style: TextStyle(color: textColor)),
-                      trailing: Icon(Icons.chevron_right, color: mutedColor),
-                      onTap: () => context.push('/settings'),
-                    ),
-                    Divider(color: borderColor),
-
-                    // Password change
-                    ListTile(
-                      leading: Icon(Icons.lock_outline, color: textColor),
-                      title: Text('Change Password', style: TextStyle(color: textColor)),
-                      trailing: Icon(Icons.chevron_right, color: mutedColor),
-                      onTap: _showChangePasswordModal,
-                    ),
-                    Divider(color: borderColor),
-
-                    // Log out
-                    ListTile(
-                      leading: const Icon(Icons.logout, color: kAccentRed),
-                      title: const Text('Log Out', style: TextStyle(color: kAccentRed, fontWeight: FontWeight.bold)),
-                      onTap: _logout,
-                    ),
+                    _buildQuickActions(),
                   ],
                 ),
               ),
@@ -401,25 +484,5 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> with SingleTicker
     );
   }
 
-  BarChartGroupData _buildBarGroup(int x, double y, bool isDark) {
-    return BarChartGroupData(
-      x: x,
-      barRods: [
-        BarChartRodData(
-          toY: y,
-          color: kAccentGreen,
-          width: 14,
-          borderRadius: const BorderRadius.only(
-            topLeft: Radius.circular(4),
-            topRight: Radius.circular(4),
-          ),
-          backDrawRodData: BackgroundBarChartRodData(
-            show: true,
-            toY: 8,
-            color: isDark ? kDarkSurface : kLightSurface,
-          ),
-        ),
-      ],
-    );
-  }
+
 }

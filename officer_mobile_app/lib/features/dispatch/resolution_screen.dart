@@ -1,9 +1,11 @@
-import 'dart:async';
+import 'dart:io';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:lottie/lottie.dart';
 import 'package:intl/intl.dart';
+import 'package:image_picker/image_picker.dart';
 
 import 'dispatch_provider.dart';
 import 'navigation_screen.dart';
@@ -24,6 +26,10 @@ class _ResolutionScreenState extends ConsumerState<ResolutionScreen> {
   bool _showSuccessAnimation = false;
   bool _isSubmitting = false;
   late String _arrivalTimeStr;
+  
+  final ImagePicker _picker = ImagePicker();
+  final List<String> _photosBase64 = [];
+  final List<File> _photoFiles = [];
 
   @override
   void initState() {
@@ -82,6 +88,7 @@ class _ResolutionScreenState extends ConsumerState<ResolutionScreen> {
     await ref.read(dispatchProvider.notifier).resolveDispatch(
       _isFalseAlarm,
       _notesController.text,
+      _photosBase64,
     );
 
     // Clear the note provider
@@ -99,6 +106,25 @@ class _ResolutionScreenState extends ConsumerState<ResolutionScreen> {
           context.go('/');
         }
       });
+    }
+  }
+
+  Future<void> _takePhoto() async {
+    try {
+      final XFile? photo = await _picker.pickImage(
+        source: ImageSource.camera,
+        imageQuality: 50, // Compress to save bandwidth
+        maxWidth: 1024,
+      );
+      if (photo != null) {
+        final bytes = await File(photo.path).readAsBytes();
+        setState(() {
+          _photoFiles.add(File(photo.path));
+          _photosBase64.add(base64Encode(bytes));
+        });
+      }
+    } catch (e) {
+      debugPrint("Photo capture error: $e");
     }
   }
 
@@ -316,6 +342,39 @@ class _ResolutionScreenState extends ConsumerState<ResolutionScreen> {
                 ),
               ),
               const SizedBox(height: 16),
+              
+              if (!_isFalseAlarm) ...[
+                Text('Evidence (optional):', style: Theme.of(context).textTheme.labelLarge),
+                const SizedBox(height: 8),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      InkWell(
+                        onTap: _takePhoto,
+                        child: Container(
+                          width: 80,
+                          height: 80,
+                          decoration: BoxDecoration(
+                            color: surfaceColor,
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: borderColor),
+                          ),
+                          child: const Center(child: Icon(Icons.camera_alt, color: kAccentGreen)),
+                        ),
+                      ),
+                      ..._photoFiles.map((file) => Padding(
+                            padding: const EdgeInsets.only(left: 8.0),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.file(file, width: 80, height: 80, fit: BoxFit.cover),
+                            ),
+                          )),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
 
               // Submit Button
               PrimaryButton(

@@ -28,7 +28,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   double _pingInterval = 3.0; // seconds
   String _autoOfflineIdle = 'Never';
   double _autoRejectSeconds = 30.0;
-  late TextEditingController _serverUrlController;
+  String _navApp = 'Google Maps';
+  String _language = 'English';
+  late TextEditingController _iceController;
 
   @override
   void initState() {
@@ -46,25 +48,22 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     _pingInterval = _settingsBox.get('ping_interval', defaultValue: 3.0);
     _autoOfflineIdle = _settingsBox.get('auto_offline_idle', defaultValue: 'Never');
     _autoRejectSeconds = _settingsBox.get('auto_reject_seconds', defaultValue: 30.0);
+    _navApp = _settingsBox.get('nav_app', defaultValue: 'Google Maps');
+    _language = _settingsBox.get('language', defaultValue: 'English');
     
-    final savedUrl = _settingsBox.get('server_url', defaultValue: 'http://localhost:8000');
-    _serverUrlController = TextEditingController(text: savedUrl);
+    final savedIce = _settingsBox.get('ice_contact', defaultValue: '');
+    _iceController = TextEditingController(text: savedIce);
   }
 
   void _saveSetting(String key, dynamic value) {
     _settingsBox.put(key, value);
   }
 
-  void _copyLogsToClipboard() {
-    Clipboard.setData(const ClipboardData(text: '[DEBUG LOGS] v1.4.2 · build 88 · status=online · api_url=http://localhost:8000 · ping=3s · timeout=30s · location=12.9716,77.5946'));
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Debug logs copied to clipboard'), backgroundColor: kAccentGreen),
-    );
-  }
+
 
   @override
   void dispose() {
-    _serverUrlController.dispose();
+    _iceController.dispose();
     super.dispose();
   }
 
@@ -275,17 +274,88 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             ),
             const SizedBox(height: 32),
 
-            const SectionHeader(title: 'ABOUT & DEBUG'),
+            const SectionHeader(title: 'PREFERENCES'),
 
-            // Server URL
-            Text('Server URL:', style: Theme.of(context).textTheme.labelLarge),
+            // Navigation App
+            Text('Navigation App:', style: Theme.of(context).textTheme.labelLarge),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(
+                color: surfaceColor,
+                border: Border.all(color: borderColor),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  value: _navApp,
+                  dropdownColor: surfaceColor,
+                  style: AppTheme.monoSm.copyWith(color: textColor),
+                  icon: Icon(Icons.arrow_drop_down, color: textColor),
+                  isExpanded: true,
+                  items: const [
+                    DropdownMenuItem(value: 'Google Maps', child: Text('Google Maps')),
+                    DropdownMenuItem(value: 'Waze', child: Text('Waze')),
+                    DropdownMenuItem(value: 'In-App Map', child: Text('In-App Map')),
+                  ],
+                  onChanged: (val) {
+                    if (val != null) {
+                      setState(() => _navApp = val);
+                      _saveSetting('nav_app', val);
+                    }
+                  },
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Language
+            Text('Language:', style: Theme.of(context).textTheme.labelLarge),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12),
+              decoration: BoxDecoration(
+                color: surfaceColor,
+                border: Border.all(color: borderColor),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: DropdownButtonHideUnderline(
+                child: DropdownButton<String>(
+                  value: _language,
+                  dropdownColor: surfaceColor,
+                  style: AppTheme.monoSm.copyWith(color: textColor),
+                  icon: Icon(Icons.arrow_drop_down, color: textColor),
+                  isExpanded: true,
+                  items: const [
+                    DropdownMenuItem(value: 'English', child: Text('English')),
+                    DropdownMenuItem(value: 'Hindi', child: Text('Hindi')),
+                    DropdownMenuItem(value: 'Tamil', child: Text('Tamil')),
+                  ],
+                  onChanged: (val) {
+                    if (val != null) {
+                      setState(() => _language = val);
+                      _saveSetting('language', val);
+                    }
+                  },
+                ),
+              ),
+            ),
+            const SizedBox(height: 32),
+
+            const SectionHeader(title: 'EMERGENCY'),
+
+            // ICE Contact
+            Text('In Case of Emergency (ICE) Contact:', style: Theme.of(context).textTheme.labelLarge),
             const SizedBox(height: 8),
             TextField(
-              controller: _serverUrlController,
+              controller: _iceController,
+              keyboardType: TextInputType.phone,
               style: AppTheme.monoSm.copyWith(color: textColor),
               decoration: InputDecoration(
                 filled: true,
                 fillColor: surfaceColor,
+                hintText: 'e.g. +91 98765 43210',
+                hintStyle: AppTheme.monoSm.copyWith(color: mutedColor),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(6),
                   borderSide: BorderSide(color: borderColor),
@@ -301,22 +371,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
               ),
               onChanged: (val) {
-                _saveSetting('server_url', val);
+                _saveSetting('ice_contact', val);
               },
-            ),
-            const SizedBox(height: 24),
-
-            // Send debug logs button
-            OutlinedPrimaryButton(
-              label: 'Send Debug Logs',
-              onPressed: _copyLogsToClipboard,
-            ),
-            const SizedBox(height: 12),
-
-            // Open API Docs button
-            OutlinedPrimaryButton(
-              label: 'Open API Docs',
-              onPressed: () {},
             ),
             const SizedBox(height: 24),
 

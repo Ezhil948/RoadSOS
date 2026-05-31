@@ -105,6 +105,7 @@ async def get_nearby_services(
             for r in rows_db
         ]
         places.sort(key=lambda p: p.distance_km)
+        places = [p for p in places if p.distance_km <= (radius / 1000.0)]
 
     # Log the search event
     db.add(AppLog(

@@ -37,13 +37,6 @@ class EmergencyTab extends StatelessWidget {
             const SizedBox(height: 12),
             _buildQuickActions(context),
             const SizedBox(height: 24),
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 20),
-              child: Text('Important Numbers', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: Colors.white)),
-            ),
-            const SizedBox(height: 12),
-            _buildImportantNumbers(),
-            const SizedBox(height: 24),
             _buildSafetyTips(),
           ],
         ),
@@ -200,8 +193,7 @@ class EmergencyTab extends StatelessWidget {
   }
 
   Widget _buildQuickActions(BuildContext context) {
-    final actions = [
-      {'icon': Icons.camera_alt_rounded, 'label': 'Accident\nReport', 'color': AppTheme.accentAmber},
+    final calls = [
       {'icon': Icons.local_police_rounded, 'label': 'Call\nPolice', 'color': AppTheme.accentBlue, 'number': '100'},
       {'icon': Icons.local_hospital_rounded, 'label': 'Call\nAmbulance', 'color': AppTheme.accentGreen, 'number': '108'},
       {'icon': Icons.local_fire_department_rounded, 'label': 'Call\nFire Brigade', 'color': AppTheme.primaryRed, 'number': '101'},
@@ -209,105 +201,85 @@ class EmergencyTab extends StatelessWidget {
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Row(
-        children: actions.asMap().entries.map((entry) {
-          final idx = entry.key;
-          final action = entry.value;
-          final color = action['color'] as Color;
-          return Expanded(
-            child: Padding(
-              padding: EdgeInsets.only(right: idx < actions.length - 1 ? 10 : 0),
-              child: GestureDetector(
-                onTap: () {
-                  if (idx == 0) {
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => const ReportScreen()));
-                  }
-                  // Phone calls for other actions handled natively
-                },
-                child: Container(
-                  height: 80,
-                  decoration: BoxDecoration(
-                    color: color.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: color.withOpacity(0.3), width: 1),
-                  ),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(action['icon'] as IconData, color: color, size: 24),
-                      const SizedBox(height: 6),
-                      Text(
-                        action['label'] as String,
-                        textAlign: TextAlign.center,
-                        style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: color, height: 1.2),
+      child: Column(
+        children: [
+          Row(
+            children: calls.asMap().entries.map((entry) {
+              final idx = entry.key;
+              final action = entry.value;
+              final color = action['color'] as Color;
+              return Expanded(
+                child: Padding(
+                  padding: EdgeInsets.only(right: idx < calls.length - 1 ? 10 : 0),
+                  child: GestureDetector(
+                    onTap: () {
+                      // Phone calls handled natively
+                    },
+                    child: Container(
+                      height: 80,
+                      decoration: BoxDecoration(
+                        color: color.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: color.withOpacity(0.3), width: 1),
                       ),
-                    ],
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(action['icon'] as IconData, color: color, size: 24),
+                          const SizedBox(height: 6),
+                          Text(
+                            action['label'] as String,
+                            textAlign: TextAlign.center,
+                            style: TextStyle(fontSize: 10, fontWeight: FontWeight.w600, color: color, height: 1.2),
+                          ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
+              );
+            }).toList(),
+          ),
+          const SizedBox(height: 12),
+          GestureDetector(
+            onTap: () {
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const ReportScreen()));
+            },
+            child: Container(
+              height: 60,
+              decoration: BoxDecoration(
+                color: AppTheme.accentAmber.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: AppTheme.accentAmber.withOpacity(0.3), width: 1),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.camera_alt_rounded, color: AppTheme.accentAmber, size: 24),
+                  const SizedBox(width: 10),
+                  const Text(
+                    'File Accident Report',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700, color: AppTheme.accentAmber),
+                  ),
+                ],
               ),
             ),
-          );
-        }).toList(),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildImportantNumbers() {
-    final numbers = [
-      {'label': 'National Emergency', 'number': '112', 'color': AppTheme.primaryRed, 'icon': Icons.sos_rounded},
-      {'label': 'Police', 'number': '100', 'color': AppTheme.accentBlue, 'icon': Icons.local_police_rounded},
-      {'label': 'Ambulance', 'number': '108', 'color': AppTheme.accentGreen, 'icon': Icons.local_hospital_rounded},
-      {'label': 'Highway Patrol', 'number': '1033', 'color': AppTheme.accentAmber, 'icon': Icons.directions_car_rounded},
-    ];
 
-    return SizedBox(
-      height: 90,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 20),
-        itemCount: numbers.length,
-        itemBuilder: (ctx, i) {
-          final item = numbers[i];
-          final color = item['color'] as Color;
-          return Container(
-            width: 130,
-            margin: const EdgeInsets.only(right: 12),
-            decoration: BoxDecoration(
-              color: AppTheme.surfaceDark,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: AppTheme.borderDark),
-            ),
-            padding: const EdgeInsets.all(12),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Icon(item['icon'] as IconData, color: color, size: 20),
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(item['number'] as String,
-                        style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: color, fontFamily: 'monospace')),
-                    Text(item['label'] as String,
-                        style: const TextStyle(fontSize: 10, color: AppTheme.textMuted), maxLines: 1, overflow: TextOverflow.ellipsis),
-                  ],
-                ),
-              ],
-            ),
-          );
-        },
-      ),
-    );
-  }
 
   Widget _buildSafetyTips() {
     final tips = [
-      {'icon': '🧘', 'title': 'Stay Calm', 'tip': 'Take a deep breath. Panicking worsens the situation. Assess injuries first, then call for help.'},
-      {'icon': '🚨', 'title': 'Hazard Lights On', 'tip': 'Immediately turn on hazard lights after any accident to warn other drivers.'},
-      {'icon': '📍', 'title': 'Know Your Location', 'tip': 'Note the nearest milestone, landmark, or road sign — it helps responders reach you faster.'},
-      {'icon': '🚗', 'title': 'Move to Safety', 'tip': 'If the vehicle can move and no one is seriously injured, shift it to the road shoulder.'},
-      {'icon': '🔴', 'title': 'Do Not Flee', 'tip': 'Leaving the scene of an accident is a criminal offence under Indian law.'},
-      {'icon': '🆘', 'title': 'False Alarms', 'tip': 'You have 10 seconds to cancel an SOS after triggering it. Repeated false alerts will restrict your access.'},
+      {'icon': Icons.self_improvement, 'title': 'Stay Calm', 'tip': 'Take a deep breath. Panicking worsens the situation. Assess injuries first before acting.'},
+      {'icon': Icons.directions_car, 'title': 'Move to Safety', 'tip': 'If you are on a busy road, move yourself and others to the side or behind a barrier to avoid secondary accidents.'},
+      {'icon': Icons.phone, 'title': 'Call for Help First', 'tip': 'Trigger the SOS or call an ambulance before trying to administer first aid, unless someone is actively bleeding.'},
+      {'icon': Icons.location_on, 'title': 'Share Precise Location', 'tip': 'Note the nearest milestone, shop, or landmark. This helps first responders locate you faster if GPS drops.'},
+      {'icon': Icons.camera_alt, 'title': 'Document the Scene', 'tip': 'If it is safe to do so, take photos of the vehicles, license plates, and road conditions for the accident report.'},
+      {'icon': Icons.health_and_safety, 'title': 'Do Not Move the Severely Injured', 'tip': 'Unless there is immediate danger (like fire), wait for paramedics. Moving them could worsen the injuries.'},
     ];
 
     return Padding(
@@ -328,7 +300,7 @@ class EmergencyTab extends StatelessWidget {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(tip['icon'] as String, style: const TextStyle(fontSize: 22)),
+                    Icon(tip['icon'] as IconData, color: AppTheme.accentAmber, size: 22),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(

@@ -93,24 +93,45 @@ class _GlobalDispatchOverlayState extends ConsumerState<GlobalDispatchOverlay> w
               children: [
                 // Header
                 Container(
-                  color: kAccentRed.withOpacity(0.1),
+                  color: (_currentDispatch?.type == 'officer_backup') ? kAccentBlue.withOpacity(0.2) : kAccentRed.withOpacity(0.1),
                   padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
                   child: Row(
                     children: [
-                      const Icon(Icons.warning_amber_rounded, color: kAccentRed, size: 28),
+                      Icon(
+                        (_currentDispatch?.type == 'officer_backup') ? Icons.local_police : Icons.warning_amber_rounded,
+                        color: (_currentDispatch?.type == 'officer_backup') ? kAccentBlue : kAccentRed,
+                        size: 28,
+                      ),
                       const SizedBox(width: 12),
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Text(
-                              'INCOMING DISPATCH',
-                              style: AppTheme.monoMd.copyWith(color: kAccentRed, fontWeight: FontWeight.bold),
+                              (_currentDispatch?.type == 'officer_backup') ? 'OFFICER NEEDS BACKUP' : 'INCOMING DISPATCH',
+                              style: AppTheme.monoMd.copyWith(
+                                color: (_currentDispatch?.type == 'officer_backup') ? kAccentBlue : kAccentRed,
+                                fontWeight: FontWeight.bold,
+                              ),
                             ),
                             if (_currentDispatch != null)
                               Text(
-                                '${_currentDispatch!.message.toUpperCase()} - ${_currentDispatch!.severity.toUpperCase()}',
+                                (_currentDispatch!.type == 'officer_backup')
+                                  ? '${_currentDispatch!.officerName?.toUpperCase() ?? 'UNKNOWN OFFICER'} - URGENT'
+                                  : '${_currentDispatch!.message.toUpperCase()} - ${_currentDispatch!.severity.toUpperCase()}',
                                 style: AppTheme.monoSm.copyWith(color: isDark ? kDarkText : kLightText),
+                              ),
+                            if (_currentDispatch?.type == 'citizen_alert' && _currentDispatch!.reporters.length > 1)
+                              Padding(
+                                padding: const EdgeInsets.only(top: 4),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(color: kAccentAmber.withOpacity(0.2), borderRadius: BorderRadius.circular(4)),
+                                  child: Text(
+                                    '${_currentDispatch!.reporters.length} REPORTS AGGREGATED',
+                                    style: AppTheme.monoSm.copyWith(color: kAccentAmber, fontSize: 9, fontWeight: FontWeight.bold),
+                                  ),
+                                ),
                               ),
                           ],
                         ),
@@ -119,12 +140,15 @@ class _GlobalDispatchOverlayState extends ConsumerState<GlobalDispatchOverlay> w
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
-                            color: kAccentRed.withOpacity(0.2),
+                            color: (_currentDispatch?.type == 'officer_backup') ? kAccentBlue.withOpacity(0.2) : kAccentRed.withOpacity(0.2),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
                             '${_currentDispatch!.distanceKm} KM',
-                            style: AppTheme.monoSm.copyWith(color: kAccentRed, fontWeight: FontWeight.bold),
+                            style: AppTheme.monoSm.copyWith(
+                              color: (_currentDispatch?.type == 'officer_backup') ? kAccentBlue : kAccentRed,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
                     ],
@@ -188,12 +212,25 @@ class _GlobalDispatchOverlayState extends ConsumerState<GlobalDispatchOverlay> w
                 AnimatedBuilder(
                   animation: _timerController,
                   builder: (context, child) {
+                    final remaining = 1.0 - _timerController.value;
+                    Color barColor;
+                    if (_timerController.value > 0.66) {
+                      barColor = kAccentRed;       // Last third — red (urgent)
+                    } else if (_timerController.value > 0.33) {
+                      barColor = kAccentAmber;     // Middle third — amber (warning)
+                    } else {
+                      barColor = kAccentGreen;     // First third — green (plenty of time)
+                    }
+                    
                     return Align(
                       alignment: Alignment.centerLeft,
                       child: Container(
                         height: 4,
-                        width: MediaQuery.of(context).size.width * _timerController.value,
-                        color: Colors.white,
+                        width: MediaQuery.of(context).size.width * remaining,
+                        decoration: BoxDecoration(
+                          color: barColor,
+                          borderRadius: BorderRadius.circular(2),
+                        ),
                       ),
                     );
                   },

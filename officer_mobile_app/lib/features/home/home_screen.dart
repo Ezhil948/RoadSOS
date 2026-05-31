@@ -1,4 +1,4 @@
-import 'dart:math' show max;
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -31,9 +31,8 @@ class HomeScreen extends ConsumerWidget {
               _buildStatusBar(context, ref, status),
               const SizedBox(height: 32),
               
-              // Shift Stats
-              const WeeklyStatsPanel(),
-              const SizedBox(height: 32),
+              
+              _buildShiftSummary(context),
               
               // Activity Feed
               const SectionHeader(title: 'SHIFT ACTIVITY'),
@@ -66,7 +65,7 @@ class HomeScreen extends ConsumerWidget {
                 color: kAccentBlue.withOpacity(0.1),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.person, color: kAccentBlue, size: 28),
+              child: const Icon(Icons.shield_outlined, color: kAccentBlue, size: 28),
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -75,7 +74,7 @@ class HomeScreen extends ConsumerWidget {
                 children: [
                   Text(Hive.box('settings').get('officer_name', defaultValue: 'OFFICER').toString().toUpperCase(), style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold)),
                   const SizedBox(height: 4),
-                  Text('Badge #${Hive.box('settings').get('badge_number', defaultValue: '0000')} • Shift: 06:00 – 18:00', style: AppTheme.monoSm.copyWith(color: kDarkMuted)),
+                  Text('Badge #${Hive.box('settings').get('badge_number', defaultValue: '----')}', style: AppTheme.monoSm.copyWith(color: kDarkMuted)),
                 ],
               ),
             ),
@@ -128,11 +127,60 @@ class HomeScreen extends ConsumerWidget {
 
   Widget _buildActivityFeed(BuildContext context) {
     return ListView(
-      children: [
-        _buildActivityRow(context, '10:42', 'Dispatch #88 resolved', 'Accident near MG Road · 1.2 km', BadgeState.resolved, 'closed'),
-        _buildActivityRow(context, '09:31', 'Dispatch #85 rejected', 'SOS at Brigade Road · busy status', BadgeState.passed, 'passed'),
-        _buildActivityRow(context, '08:41', 'Patrol started', 'Location: 12.9716°N 77.5946°E', BadgeState.online, 'online'),
+      children: const [
+        Padding(
+          padding: EdgeInsets.all(32.0),
+          child: Center(
+            child: Text(
+              'No recent shift activity.',
+              style: TextStyle(color: kDarkMuted),
+            ),
+          ),
+        ),
       ],
+    );
+  }
+
+  Widget _buildShiftSummary(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SectionHeader(title: 'TODAY\'S SHIFT'),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Expanded(child: _kpiChip(Icons.local_police_outlined, 'Dispatches', '0', kAccentBlue)),
+            const SizedBox(width: 8),
+            Expanded(child: _kpiChip(Icons.timer_outlined, 'Avg Response', '-- min', kAccentAmber)),
+            const SizedBox(width: 8),
+            Expanded(child: _kpiChip(Icons.route_outlined, 'Patrolled', '0.0 km', kAccentGreen)),
+            const SizedBox(width: 8),
+            Expanded(child: _kpiChip(Icons.check_circle_outline, 'Resolved', '0%', kAccentGreen)),
+          ],
+        ),
+        const SizedBox(height: 32),
+      ],
+    );
+  }
+
+  Widget _kpiChip(IconData icon, String title, String value, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 12),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.08),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color.withOpacity(0.2)),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, size: 16, color: color),
+          const SizedBox(height: 8),
+          Text(title, style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis),
+          const SizedBox(height: 4),
+          Text(value, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold), textAlign: TextAlign.center, maxLines: 1, overflow: TextOverflow.ellipsis),
+        ],
+      ),
     );
   }
 
@@ -191,19 +239,51 @@ class HomeScreen extends ConsumerWidget {
     return Row(
       children: [
         Expanded(
-          child: OutlinedPrimaryButton(
-            label: '⊕ Report Incident',
-            onPressed: () => _showReportIncidentSheet(context, ref),
+          child: _actionButton(
+            Icons.add_circle_outline,
+            'Report Incident',
+            kAccentGreen,
+            () => _showReportIncidentSheet(context, ref),
           ),
         ),
-        const SizedBox(width: 16),
+        const SizedBox(width: 12),
         Expanded(
-          child: OutlinedPrimaryButton(
-            label: '📍 Share Location',
-            onPressed: () => _showShareLocationSheet(context),
+          child: _actionButton(
+            Icons.share_location_outlined,
+            'Share Location',
+            kAccentBlue,
+            () => _showShareLocationSheet(context),
           ),
         ),
       ],
+    );
+  }
+
+  Widget _actionButton(IconData icon, String label, Color color, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: 48,
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.08),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: color.withOpacity(0.3)),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, color: color, size: 18),
+            const SizedBox(width: 8),
+            Flexible(
+              child: Text(
+                label,
+                style: TextStyle(color: color, fontSize: 13, fontWeight: FontWeight.w600),
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -250,7 +330,7 @@ class HomeScreen extends ConsumerWidget {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('⊕ REPORT INCIDENT', style: AppTheme.monoMd.copyWith(color: kAccentGreen)),
+                  Text('REPORT INCIDENT', style: AppTheme.monoMd.copyWith(color: kAccentGreen)),
                   const SizedBox(height: 24),
                   
                   Text('INCIDENT TYPE', style: Theme.of(context).textTheme.labelLarge),
@@ -328,20 +408,21 @@ class HomeScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 24),
 
-                  PrimaryButton(
-                    label: 'SUBMIT REPORT',
-                    onPressed: () async {
-                      Navigator.pop(ctx);
-                      try {
-                        final dio = ref.read(dioProvider);
-                        final formData = FormData.fromMap({
-                          'latitude': 12.8785,
-                          'longitude': 80.0850,
-                          'severity': severity,
-                          'casualties': int.tryParse(casController.text) ?? 0,
-                          'description': '${selectedType.toUpperCase()}: ${descController.text}',
-                        });
-                        await dio.post('/accident/report', data: formData);
+                    PrimaryButton(
+                      label: 'SUBMIT REPORT',
+                      onPressed: () async {
+                        Navigator.pop(ctx);
+                        try {
+                          final pos = await Geolocator.getCurrentPosition();
+                          final dio = ref.read(dioProvider);
+                          final formData = FormData.fromMap({
+                            'latitude': pos.latitude,
+                            'longitude': pos.longitude,
+                            'severity': severity,
+                            'casualties': int.tryParse(casController.text) ?? 0,
+                            'description': '${selectedType.toUpperCase()}: ${descController.text}',
+                          });
+                          await dio.post('/accident/report', data: formData);
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(content: Text('Incident report submitted to station'), backgroundColor: kAccentGreen),
                         );
@@ -384,7 +465,7 @@ class HomeScreen extends ConsumerWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('📍 CURRENT COORDINATES', style: AppTheme.monoMd.copyWith(color: kAccentBlue)),
+              Text('CURRENT COORDINATES', style: AppTheme.monoMd.copyWith(color: kAccentBlue)),
               const SizedBox(height: 16),
               Container(
                 padding: const EdgeInsets.all(12),
@@ -425,278 +506,3 @@ class HomeScreen extends ConsumerWidget {
   }
 }
 
-class WeeklyStatPoint {
-  final String dayLabel;
-  final int dispatches;
-  final double avgResponseMins;
-  final double avgDistanceKm;
-  final bool isToday;
-
-  const WeeklyStatPoint({
-    required this.dayLabel,
-    required this.dispatches,
-    required this.avgResponseMins,
-    required this.avgDistanceKm,
-    required this.isToday,
-  });
-}
-
-class WeeklyStatsPanel extends StatefulWidget {
-  const WeeklyStatsPanel({super.key});
-  @override
-  State<WeeklyStatsPanel> createState() => _WeeklyStatsPanelState();
-}
-
-class _WeeklyStatsPanelState extends State<WeeklyStatsPanel>
-    with SingleTickerProviderStateMixin {
-  
-  // Hardcoded weekly mock data (7 days Mon-Sun)
-  final List<WeeklyStatPoint> _weekData = [
-    WeeklyStatPoint(dayLabel: 'Mon', dispatches: 4, avgResponseMins: 12.5, avgDistanceKm: 2.3, isToday: false),
-    WeeklyStatPoint(dayLabel: 'Tue', dispatches: 6, avgResponseMins: 9.8, avgDistanceKm: 3.1, isToday: false),
-    WeeklyStatPoint(dayLabel: 'Wed', dispatches: 7, avgResponseMins: 8.2, avgDistanceKm: 4.2, isToday: false),
-    WeeklyStatPoint(dayLabel: 'Thu', dispatches: 3, avgResponseMins: 14.1, avgDistanceKm: 1.9, isToday: false),
-    WeeklyStatPoint(dayLabel: 'Fri', dispatches: 5, avgResponseMins: 10.3, avgDistanceKm: 2.8, isToday: false),
-    WeeklyStatPoint(dayLabel: 'Sat', dispatches: 2, avgResponseMins: 16.0, avgDistanceKm: 1.4, isToday: false),
-    WeeklyStatPoint(dayLabel: 'Sun', dispatches: 4, avgResponseMins: 11.7, avgDistanceKm: 2.6, isToday: true),
-  ];
-
-  int _selectedDayIndex = 6; // defaults to today (Sunday)
-  late AnimationController _barAnimCtrl;
-  late Animation<double> _barAnim;
-
-  @override
-  void initState() {
-    super.initState();
-    _barAnimCtrl = AnimationController(vsync: this, duration: const Duration(milliseconds: 800));
-    _barAnim = CurvedAnimation(parent: _barAnimCtrl, curve: Curves.easeOutCubic);
-    _barAnimCtrl.forward();
-  }
-
-  @override
-  void dispose() {
-    _barAnimCtrl.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final selectedDay = _weekData[_selectedDayIndex];
-    final maxDispatches = _weekData.map((d) => d.dispatches).reduce(max).toDouble();
-    final totalDispatches = _weekData.fold(0, (sum, d) => sum + d.dispatches);
-    final avgResp = _weekData.fold(0.0, (sum, d) => sum + d.avgResponseMins) / 7;
-    final avgDist = _weekData.fold(0.0, (sum, d) => sum + d.avgDistanceKm) / 7;
-    final resolvedRate = 91; // mock
-    final bestDay = _weekData.reduce((a, b) => a.dispatches >= b.dispatches ? a : b);
-    final fastestDay = _weekData.reduce((a, b) => a.avgResponseMins <= b.avgResponseMins ? a : b);
-    final furthestDay = _weekData.reduce((a, b) => a.avgDistanceKm >= b.avgDistanceKm ? a : b);
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Header Row
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const SectionHeader(title: 'WEEKLY PERFORMANCE'),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: kAccentBlue.withOpacity(0.12),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: const Text('May 19–25', style: TextStyle(color: kAccentBlue, fontSize: 11, fontWeight: FontWeight.bold)),
-            ),
-          ],
-        ),
-        const SizedBox(height: 16),
-
-        // Bar Chart + Summary Card Row
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            // Bar Chart (takes 60% of width)
-            Expanded(
-              flex: 6,
-              child: AnimatedBuilder(
-                animation: _barAnim,
-                builder: (context, _) {
-                  return SizedBox(
-                    height: 100,
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                      children: List.generate(_weekData.length, (i) {
-                        final d = _weekData[i];
-                        final isSelected = i == _selectedDayIndex;
-                        final barHeightRatio = d.dispatches / maxDispatches;
-                        final animatedHeight = barHeightRatio * 80 * _barAnim.value;
-                        
-                        return GestureDetector(
-                          onTap: () => setState(() => _selectedDayIndex = i),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.end,
-                            children: [
-                              // Dispatch count label (only for selected)
-                              if (isSelected)
-                                Text('${d.dispatches}', style: const TextStyle(color: kAccentGreen, fontSize: 10, fontWeight: FontWeight.bold)),
-                              const SizedBox(height: 2),
-                              // Bar
-                              AnimatedContainer(
-                                duration: const Duration(milliseconds: 200),
-                                width: 22,
-                                height: animatedHeight.clamp(6.0, 80.0),
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    begin: Alignment.topCenter,
-                                    end: Alignment.bottomCenter,
-                                    colors: isSelected
-                                        ? [kAccentGreen, kAccentGreen.withOpacity(0.6)]
-                                        : (d.isToday
-                                            ? [kAccentBlue, kAccentBlue.withOpacity(0.6)]
-                                            : [kDarkBorder, kDarkBorder.withOpacity(0.4)]),
-                                  ),
-                                  borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              // Day label
-                              Text(
-                                d.dayLabel,
-                                style: TextStyle(
-                                  color: isSelected ? kAccentGreen : (d.isToday ? kAccentBlue : kDarkMuted),
-                                  fontSize: 10,
-                                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      }),
-                    ),
-                  );
-                },
-              ),
-            ),
-            
-            const SizedBox(width: 12),
-            
-            // Summary Card (takes 40% of width)
-            Expanded(
-              flex: 4,
-              child: Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: kDarkSurface,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: kDarkBorder),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('WEEK TOTAL', style: TextStyle(color: kDarkMuted, fontSize: 9, letterSpacing: 1)),
-                    const SizedBox(height: 6),
-                    _summaryRow('$totalDispatches', 'dispatches', kAccentBlue),
-                    _summaryRow('${avgResp.toStringAsFixed(0)}m', 'avg response', kAccentAmber),
-                    _summaryRow('${avgDist.toStringAsFixed(1)}km', 'avg distance', kAccentGreen),
-                    _summaryRow('$resolvedRate%', 'resolved', kAccentGreen),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-
-        const SizedBox(height: 12),
-
-        // Selected Day Detail Strip
-        AnimatedSwitcher(
-          duration: const Duration(milliseconds: 250),
-          child: Container(
-            key: ValueKey(_selectedDayIndex),
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: kAccentGreen.withOpacity(0.08),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: kAccentGreen.withOpacity(0.3)),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _dayDetailChip(Icons.local_police, '${selectedDay.dispatches}', 'dispatches'),
-                _dayDetailChip(Icons.timer, '${selectedDay.avgResponseMins.toStringAsFixed(0)}m', 'response'),
-                _dayDetailChip(Icons.route, '${selectedDay.avgDistanceKm.toStringAsFixed(1)}km', 'distance'),
-              ],
-            ),
-          ),
-        ),
-
-        const SizedBox(height: 12),
-
-        // 4 Micro-KPI Chips Row
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Expanded(child: _kpiChip('🚔', 'Best Day', '${bestDay.dayLabel} (${bestDay.dispatches})', kAccentBlue)),
-            const SizedBox(width: 8),
-            Expanded(child: _kpiChip('⚡', 'Fastest', '${fastestDay.avgResponseMins.toStringAsFixed(0)}m avg', kAccentAmber)),
-            const SizedBox(width: 8),
-            Expanded(child: _kpiChip('📍', 'Furthest', '${furthestDay.avgDistanceKm.toStringAsFixed(1)} km', kAccentGreen)),
-            const SizedBox(width: 8),
-            Expanded(child: _kpiChip('🏆', 'Resolved', '$resolvedRate%', kAccentGreen)),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _summaryRow(String value, String label, Color color) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 2),
-      child: Row(
-        children: [
-          Text(value, style: TextStyle(color: color, fontSize: 13, fontWeight: FontWeight.bold)),
-          const SizedBox(width: 4),
-          Flexible(child: Text(label, style: const TextStyle(color: kDarkMuted, fontSize: 9), overflow: TextOverflow.ellipsis)),
-        ],
-      ),
-    );
-  }
-
-  Widget _dayDetailChip(IconData icon, String value, String label) {
-    return Column(
-      children: [
-        Icon(icon, size: 14, color: kAccentGreen),
-        const SizedBox(height: 2),
-        Text(value, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
-        Text(label, style: const TextStyle(color: kDarkMuted, fontSize: 9)),
-      ],
-    );
-  }
-
-  Widget _kpiChip(String emoji, String title, String value, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: color.withOpacity(0.25)),
-      ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(emoji, style: const TextStyle(fontSize: 12)),
-              const SizedBox(width: 4),
-              Flexible(child: Text(title, style: TextStyle(color: color, fontSize: 8, fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis)),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Text(value, style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold), textAlign: TextAlign.center, maxLines: 1, overflow: TextOverflow.ellipsis),
-        ],
-      ),
-    );
-  }
-}

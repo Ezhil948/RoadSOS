@@ -34,6 +34,9 @@ class AlertStatusEnum(str, enum.Enum):
     active = "active"
     resolved = "resolved"
     false_alarm = "false_alarm"
+    cancelled = "cancelled"
+    cancelled_by_police = "cancelled_by_police"
+    cancelled_by_citizen = "cancelled_by_citizen"
 
 
 class AccidentStatusEnum(str, enum.Enum):
@@ -62,6 +65,7 @@ class SOSAlert(Base):
     message = Column(Text, nullable=True)
     device_id = Column(String(100), nullable=True, index=True)
     status = Column(Enum(AlertStatusEnum), default=AlertStatusEnum.active, index=True)
+    alert_type = Column(String(50), default="citizen_sos")
     alerted_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)
     resolved_at = Column(DateTime(timezone=True), nullable=True)
 
@@ -72,6 +76,14 @@ class SOSAlert(Base):
     new_lng = Column(Float, nullable=True)
     closure_notes = Column(Text, nullable=True)
     closure_photo_urls = Column(JSON, default=list)
+    
+    # Cancellation Details
+    cancellation_reason = Column(String(100), nullable=True)
+    cancellation_details = Column(Text, nullable=True)
+    cancelled_by = Column(String(50), nullable=True)
+    
+    # Officer Backup Details
+    requester_id = Column(Integer, nullable=True)
 
     # FK link to accident report (optional — set when user also files a report)
     accident_report_id = Column(Integer, ForeignKey("accident_reports.id"), nullable=True)
