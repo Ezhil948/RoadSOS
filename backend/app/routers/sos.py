@@ -34,88 +34,91 @@ class CloseIncidentRequest(BaseModel):
 
 @router.post("/alert", response_model=SOSResponse, summary="Trigger SOS emergency alert")
 async def send_sos_alert(payload: SOSRequest, db: AsyncSession = Depends(get_db)):
-    if payload.device_id:
-        # 1. Cooldown Check (150 seconds)
-        cutoff_time = datetime.now(timezone.utc) - timedelta(seconds=150)
-        recent_query = select(SOSAlert).where(
-            SOSAlert.device_id == payload.device_id,
-            SOSAlert.alerted_at >= cutoff_time
-        ).order_by(SOSAlert.alerted_at.desc()).limit(1)
-        recent_result = await db.execute(recent_query)
-        recent_alert = recent_result.scalar_one_or_none()
-        
-        if recent_alert:
-            if recent_alert.alerted_at.tzinfo is None:
-                alert_time = recent_alert.alerted_at.replace(tzinfo=timezone.utc)
-            else:
-                alert_time = recent_alert.alerted_at
-            elapsed = (datetime.now(timezone.utc) - alert_time).total_seconds()
-            remaining = int(max(0, 150 - elapsed))
-            if remaining > 0:
-                raise HTTPException(status_code=429, detail={"error": "cooldown", "remaining_seconds": remaining})
-                
-    # 2. Duplicate Suppression (Merge into existing within 200m)
-    import math
-    # 0.5km bounding box to limit DB records fetched
-    bb_lat = 0.5 / 111.0
-    bb_lng = 0.5 / (111.0 * math.cos(math.radians(payload.latitude)))
-    
-    active_query = select(SOSAlert).where(
-        SOSAlert.status == "active",
-        SOSAlert.latitude.between(payload.latitude - bb_lat, payload.latitude + bb_lat),
-        SOSAlert.longitude.between(payload.longitude - bb_lng, payload.longitude + bb_lng)
-    )
-    active_result = await db.execute(active_query)
-    active_alerts = active_result.scalars().all()
-    
-    for existing_alert in active_alerts:
-        dist_km = haversine_km(existing_alert.latitude, existing_alert.longitude, payload.latitude, payload.longitude)
-        if dist_km <= 0.2:  # 200m
-            # Merge
-            reps = list(existing_alert.reporters) if existing_alert.reporters else []
-            reps.append({"device_id": payload.device_id})
-            existing_alert.reporters = reps
-            await db.flush()
-            
-            return SOSResponse(
-                status="merged",
-                alert_id=existing_alert.id,
-                message="Help is already on the way for this location.",
-                nearest_emergency="112",
-                action="CALL_112",
+    try:
+        if payload.device_id:
+            # 1. Cooldown Check (150 seconds)
+            result = await db.execute(
+                select(SOSAlert).where(
+                    SOSAlert.device_id == payload.device_id,
+                    SOSAlert.alerted_at >= datetime.utcnow() - timedelta(seconds=150)
+                ).order_by(SOSAlert.alerted_at.desc())
             )
+            recent_alert = result.scalars().first()
+            if recent_alert:
+                return SOSResponse(
+                    status="received",
+                    alert_id=recent_alert.id,
+                    message="SOS already active. Officers are being dispatched.",
+                    nearest_emergency="112",
+                    action="WAIT"
+                )
 
-    alert = SOSAlert(
-        latitude=payload.latitude,
-        longitude=payload.longitude,
-        severity=payload.severity,
-        message=payload.message,
-        device_id=payload.device_id,
-        status="active",
-    )
-    db.add(alert)
+        # 2. Duplicate Suppression (Merge into existing within 200m)
+        import math
+        # 0.5km bounding box to limit DB records fetched
+        bb_lat = 0.5 / 111.0
+        bb_lng = 0.5 / (111.0 * math.cos(math.radians(payload.latitude)))
 
-    db.add(AppLog(
-        event_type="SOS_TRIGGERED",
-        latitude=payload.latitude,
-        longitude=payload.longitude,
-        device_id=payload.device_id,
-        log_metadata=json.dumps({"severity": payload.severity}),
-    ))
+        active_query = select(SOSAlert).where(
+            SOSAlert.status == "active",
+            SOSAlert.latitude.between(payload.latitude - bb_lat, payload.latitude + bb_lat),
+            SOSAlert.longitude.between(payload.longitude - bb_lng, payload.longitude + bb_lng)
+        )
+        active_alerts = (await db.execute(active_query)).scalars().all()
 
-    await db.flush()
-    await db.refresh(alert)
-    
-    # Auto-trigger dispatch
-    await trigger_dispatch(alert.id, db)
+        # Check precise distance
+        for alert in active_alerts:
+            dist = haversine_km(payload.latitude, payload.longitude, alert.latitude, alert.longitude)
+            if dist < 0.2:  # 200 meters
+                reporters = json.loads(alert.reporters or "[]")
+                if payload.device_id and payload.device_id not in reporters:
+                    reporters.append(payload.device_id)
+                    alert.reporters = json.dumps(reporters)
+                    await db.flush()
+                return SOSResponse(
+                    status="merged",
+                    alert_id=alert.id,
+                    message="Your alert was merged with an existing nearby emergency. Help is on the way.",
+                    nearest_emergency="112",
+                    action="WAIT"
+                )
 
-    return SOSResponse(
-        status="received",
-        alert_id=alert.id,
-        message=f"SOS #{alert.id} recorded. Call 112 immediately.",
-        nearest_emergency="112",
-        action="CALL_112",
-    )
+        # 3. Create New Alert
+        alert = SOSAlert(
+            latitude=payload.latitude,
+            longitude=payload.longitude,
+            severity=payload.severity,
+            message=payload.message,
+            device_id=payload.device_id,
+            status="active",
+        )
+        db.add(alert)
+
+        db.add(AppLog(
+            event_type="SOS_TRIGGERED",
+            latitude=payload.latitude,
+            longitude=payload.longitude,
+            device_id=payload.device_id,
+            log_metadata=json.dumps({"severity": payload.severity}),
+        ))
+
+        await db.flush()
+        await db.refresh(alert)
+        
+        # Auto-trigger dispatch
+        await trigger_dispatch(alert.id, db)
+
+        return SOSResponse(
+            status="received",
+            alert_id=alert.id,
+            message=f"SOS #{alert.id} recorded. Call 112 immediately.",
+            nearest_emergency="112",
+            action="CALL_112"
+        )
+    except Exception as e:
+        import traceback
+        err = traceback.format_exc()
+        raise HTTPException(500, detail=str(err))
 
 
 @router.get("/alerts", summary="List all SOS alerts")
