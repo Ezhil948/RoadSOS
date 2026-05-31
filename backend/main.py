@@ -85,6 +85,25 @@ async def lifespan(app: FastAPI):
         # Create all tables in roadsos_db
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
+            
+            # Apply migrations individually so one failure doesn't block the rest
+            from sqlalchemy import text
+            migrations = [
+                "ALTER TABLE sos_alerts ADD COLUMN reporters JSON;",
+                "ALTER TABLE sos_alerts ADD COLUMN location_update_pending BOOLEAN DEFAULT FALSE;",
+                "ALTER TABLE sos_alerts ADD COLUMN new_lat FLOAT;",
+                "ALTER TABLE sos_alerts ADD COLUMN new_lng FLOAT;",
+                "ALTER TABLE sos_alerts ADD COLUMN closure_notes TEXT;",
+                "ALTER TABLE sos_alerts ADD COLUMN closure_photo_urls JSON;",
+                "ALTER TABLE sos_alerts ADD COLUMN accident_report_id INTEGER;"
+            ]
+            for mig in migrations:
+                try:
+                    await conn.execute(text(mig))
+                except Exception:
+                    pass
+            print("Applied schema migrations successfully.")
+
         db_ok = await check_db_connection()
         print(f"   MySQL roadsos_db: {'OK Connected' if db_ok else 'FAILED'}", flush=True)
         print(f"   User: roadsos_admin @ {os.getenv('DB_HOST', 'localhost')}", flush=True)
