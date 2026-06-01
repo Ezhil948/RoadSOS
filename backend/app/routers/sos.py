@@ -142,6 +142,16 @@ async def close_incident(alert_id: int, payload: CloseIncidentRequest, backgroun
     await usecase.repo.commit()
     return result
 
+@router.delete("/nuke", summary="Wipe all alerts and reports for fresh start")
+async def nuke_database(db: AsyncSession = Depends(get_db)):
+    from sqlalchemy import delete
+    from app.models.db_models import SOSAlert, AccidentReport, AppLog, AIAnalysisResult
+    await db.execute(delete(AIAnalysisResult))
+    await db.execute(delete(SOSAlert))
+    await db.execute(delete(AccidentReport))
+    await db.execute(delete(AppLog))
+    return {"status": "success", "message": "All emergency data nuked"}
+
 # Background Task
 async def upload_photos_task(alert_id: int, photos: List[str], db: AsyncSession):
     from app.models.db_models import SOSAlert
