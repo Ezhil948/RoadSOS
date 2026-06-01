@@ -46,6 +46,7 @@ RoadSOS/
 - **Backend Clean Architecture**: The massive "Fat Controllers" for the `SOS`, `Dispatch`, `Auth`, and `Accident Reports` modules have been successfully broken down into Data Repositories and Domain Use Cases.
 - **Frontend/Mobile Clean Architecture**: The complex state loops (e.g., polling timers, hardware sirens, offline SMS fallbacks) have been successfully decoupled from the UI widgets in the Citizen App, Officer App, and React Dashboard.
 - **Officer App UI Revamp**: The Officer Mobile App has received a major aesthetic overhaul, including a premium glassmorphic login screen, completely redesigned custom shields/badges, an updated Splash Screen, and a much cleaner, compact Home Duty layout with refined metrics and action buttons. Settings UI has also been decluttered.
+- **Repository Cleanup**: The unused E-commerce UI template folder has been completely moved out of the project repository to a backup location, significantly reducing clutter and narrowing the focus to just the Citizen and Officer apps.
 
 ## 5. Work In Progress & Next Steps
 - **Web Admin Dashboard UI**: Build out the React Admin Dashboard vertical slice or proceed with end-to-end integration testing across the production environment.
