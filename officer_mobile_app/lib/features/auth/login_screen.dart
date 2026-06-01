@@ -148,11 +148,11 @@ class _LoginScreenState extends State<LoginScreen>
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  Color(0xFF020817), // Near black
-                  Color(0xFF0F172A), // Slate 900
-                  Color(0xFF091438), // Very deep vibrant navy
+                  Color(0xFF0F172A), // Dark Navy
+                  Color(0xFF1E3A8A), // Deep Blue
+                  Color(0xFF1D4ED8), // Blue 700
                 ],
-                stops: [0.0, 0.4, 1.0],
+                stops: [0.0, 0.6, 1.0],
               ),
             ),
           ),
@@ -210,37 +210,11 @@ class _LoginScreenState extends State<LoginScreen>
                             Container(
                               width: 100,
                               height: 100,
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(20),
-                                gradient: const LinearGradient(
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                  colors: [Color(0xFF1E293B), Color(0xFF0F172A)], // Slate 800 to Slate 900
-                                ),
-                                border: Border.all(
-                                  color: const Color(0xFF475569).withOpacity(0.5),
-                                  width: 1.5,
-                                ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.6),
-                                    blurRadius: 30,
-                                    offset: const Offset(0, 15),
-                                  ),
-                                  BoxShadow(
-                                    color: const Color(0xFF3B82F6).withOpacity(0.15),
-                                    blurRadius: 20,
-                                    spreadRadius: -5,
-                                  ),
-                                ],
-                              ),
-                              child: const Center(
-                                child: Icon(
-                                  Icons.local_police_rounded, // New distinct badge icon
-                                  size: 54, // Adjusted for login screen
-                                  color: Color(0xFF94A3B8), // Metallic silver/slate
-                                ),
-                              ),
+                            const Icon(
+                              Icons.shield_outlined,
+                              size: 96,
+                              color: Color(0xFF3B82F6), // Bright blue outline
+                            ),
                             ),
                             const SizedBox(height: 20),
                             // Main Branding text

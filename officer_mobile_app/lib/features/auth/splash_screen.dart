@@ -59,40 +59,10 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 // The Blue Shield
-                Container(
-                  width: 120,
-                  height: 120,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(24),
-                    gradient: const LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [Color(0xFF1E293B), Color(0xFF0F172A)], // Slate 800 to Slate 900
-                    ),
-                    border: Border.all(
-                      color: const Color(0xFF475569).withOpacity(0.5),
-                      width: 1.5,
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.6),
-                        blurRadius: 30,
-                        offset: const Offset(0, 15),
-                      ),
-                      BoxShadow(
-                        color: const Color(0xFF3B82F6).withOpacity(0.15),
-                        blurRadius: 20,
-                        spreadRadius: -5,
-                      ),
-                    ],
-                  ),
-                  child: const Center(
-                    child: Icon(
-                      Icons.local_police_rounded, // New distinct badge icon
-                      size: 64,
-                      color: Color(0xFF94A3B8), // Metallic silver/slate
-                    ),
-                  ),
+                const Icon(
+                  Icons.shield_outlined,
+                  size: 110,
+                  color: Color(0xFF3B82F6), // Bright blue outline
                 ),
                 const SizedBox(height: 30),
                 const Text(
