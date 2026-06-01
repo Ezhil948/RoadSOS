@@ -222,7 +222,7 @@ class HomeScreen extends ConsumerWidget {
             Expanded(child: _kpiChip(context, Icons.timer_rounded, 'Avg Response', '-- min', const Color(0xFFF59E0B))),
           ],
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 10),
         Row(
           children: [
             Expanded(child: _kpiChip(context, Icons.route_rounded, 'Patrolled', '0.0 km', const Color(0xFF10B981))),
@@ -230,7 +230,7 @@ class HomeScreen extends ConsumerWidget {
             Expanded(child: _kpiChip(context, Icons.check_circle_rounded, 'Resolved', '0%', const Color(0xFF10B981))),
           ],
         ),
-        const SizedBox(height: 32),
+        const SizedBox(height: 20),
       ],
     );
   }
@@ -238,10 +238,10 @@ class HomeScreen extends ConsumerWidget {
   Widget _kpiChip(BuildContext context, IconData icon, String title, String value, Color color) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF1E293B) : Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
         boxShadow: [
           BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4)),
@@ -252,17 +252,17 @@ class HomeScreen extends ConsumerWidget {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Container(
-            padding: const EdgeInsets.all(8),
+            padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
               color: color.withOpacity(0.15),
               shape: BoxShape.circle,
             ),
-            child: Icon(icon, size: 20, color: color),
+            child: Icon(icon, size: 16, color: color),
           ),
-          const SizedBox(height: 12),
-          Text(title, style: const TextStyle(color: kDarkMuted, fontSize: 12, fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis),
-          const SizedBox(height: 4),
-          Text(value, style: TextStyle(color: isDark ? Colors.white : Colors.black87, fontSize: 20, fontWeight: FontWeight.w800), maxLines: 1, overflow: TextOverflow.ellipsis),
+          const SizedBox(height: 8),
+          Text(title, style: const TextStyle(color: kDarkMuted, fontSize: 11, fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis),
+          const SizedBox(height: 2),
+          Text(value, style: TextStyle(color: isDark ? Colors.white : Colors.black87, fontSize: 16, fontWeight: FontWeight.w800), maxLines: 1, overflow: TextOverflow.ellipsis),
         ],
       ),
     );
