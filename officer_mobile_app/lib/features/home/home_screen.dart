@@ -108,16 +108,9 @@ class HomeScreen extends ConsumerWidget {
                   style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w800, fontSize: 18, letterSpacing: 0.5),
                 ),
                 const SizedBox(height: 4),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Text(
-                    'BADGE #${Hive.box('settings').get('badge_number', defaultValue: '----')}', 
-                    style: const TextStyle(color: kDarkMuted, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.0),
-                  ),
+                Text(
+                  'BADGE #${Hive.box('settings').get('badge_number', defaultValue: '----')}', 
+                  style: TextStyle(color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B), fontSize: 12, fontWeight: FontWeight.bold, letterSpacing: 1.0),
                 ),
               ],
             ),
@@ -195,11 +188,6 @@ class HomeScreen extends ConsumerWidget {
                   const Text(
                     'No Recent Activity',
                     style: TextStyle(color: kDarkMuted, fontSize: 16, fontWeight: FontWeight.w600),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Your shift timeline will appear here.',
-                    style: TextStyle(color: kDarkMuted.withOpacity(0.7), fontSize: 13),
                   ),
                 ],
               ),
@@ -333,7 +321,7 @@ class HomeScreen extends ConsumerWidget {
           child: _actionButton(
             Icons.add_circle_rounded,
             'Report Incident',
-            [const Color(0xFF34D399), const Color(0xFF059669)], // Brighter Emerald
+            [const Color(0xFF10B981), const Color(0xFF10B981)], // Solid Normal Green
             () => _showReportIncidentSheet(context, ref),
           ),
         ),
@@ -342,7 +330,7 @@ class HomeScreen extends ConsumerWidget {
           child: _actionButton(
             Icons.share_location_rounded,
             'Share Location',
-            [const Color(0xFF60A5FA), const Color(0xFF2563EB)], // Brighter Blue
+            [const Color(0xFF3B82F6), const Color(0xFF3B82F6)], // Solid Blue
             () => _showShareLocationSheet(context),
           ),
         ),

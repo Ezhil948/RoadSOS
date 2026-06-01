@@ -467,11 +467,6 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> with SingleTicker
                     
                     const SizedBox(height: 20),
                     
-                    const SectionHeader(title: 'EMERGENCY'),
-                    _buildEmergencySOS(),
-                    
-                    const SizedBox(height: 20),
-                    
                     const SectionHeader(title: 'QUICK ACTIONS'),
                     _buildQuickActions(),
                   ],
