@@ -77,6 +77,10 @@ class SOSAlert(Base):
     closure_notes = Column(Text, nullable=True)
     closure_photo_urls = Column(JSON, default=list)
     
+    # Stateless Dispatch Additions
+    pinged_officer_ids = Column(JSON, default=list)
+    accepted_officer_id = Column(Integer, nullable=True)
+    
     # Cancellation Details
     cancellation_reason = Column(String(100), nullable=True)
     cancellation_details = Column(Text, nullable=True)

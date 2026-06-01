@@ -12,6 +12,10 @@ import 'features/auth/phone_verify_screen.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
+import 'features/emergency/presentation/state/emergency_provider.dart';
+import 'features/emergency/data/repositories/emergency_repository_impl.dart';
+import 'features/emergency/domain/use_cases/send_sos_usecase.dart';
+
 bool _firebaseInitialized = false;
 
 void main() async {
@@ -54,6 +58,14 @@ class RoadSOSApp extends StatelessWidget {
           create: (context) => OfflineSyncService(
             apiService: context.read<ApiService>(),
           ),
+        ),
+        ChangeNotifierProvider(
+          create: (context) {
+            final api = context.read<ApiService>();
+            final repo = EmergencyRepositoryImpl(api);
+            final useCase = SendSosUseCase(repo);
+            return EmergencyProvider(useCase, repo);
+          },
         ),
       ],
       child: MaterialApp(

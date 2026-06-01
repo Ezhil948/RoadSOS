@@ -20,7 +20,23 @@ class ApiService extends ChangeNotifier {
       receiveTimeout: const Duration(seconds: 60),
       headers: {'Content-Type': 'application/json'},
     ));
-    _dio.interceptors.add(LogInterceptor(responseBody: false));
+    
+    // Standardized interceptors for production
+    _dio.interceptors.add(InterceptorsWrapper(
+      onRequest: (options, handler) {
+        debugPrint('🌐 [API REQ] ${options.method} ${options.uri}');
+        return handler.next(options);
+      },
+      onResponse: (response, handler) {
+        debugPrint('✅ [API RES] ${response.statusCode} ${response.requestOptions.uri}');
+        return handler.next(response);
+      },
+      onError: (DioException e, handler) {
+        debugPrint('❌ [API ERR] ${e.response?.statusCode} ${e.requestOptions.uri}');
+        debugPrint('Error Data: ${e.response?.data}');
+        return handler.next(e);
+      },
+    ));
     
     _overpassDio = Dio(BaseOptions(
       connectTimeout: const Duration(seconds: 15),
@@ -29,6 +45,16 @@ class ApiService extends ChangeNotifier {
         'User-Agent': 'RoadSOS-App/1.0 (contact: test@example.com)',
       },
     ));
+  }
+  
+  // Standardized error handler
+  Map<String, dynamic> _handleError(dynamic e) {
+    if (e is DioException) {
+      final statusCode = e.response?.statusCode;
+      final message = e.response?.data?['detail'] ?? e.message;
+      return {'status': 'error', 'message': message, 'code': statusCode};
+    }
+    return {'status': 'error', 'message': e.toString()};
   }
   
   Future<List<ServicePlace>> getNearbyServices({
@@ -52,7 +78,7 @@ class ApiService extends ChangeNotifier {
       notifyListeners();
       
       final results = response.data['results'] as List? ?? [];
-      List<ServicePlace> places = results.map((p) => ServicePlace(
+      return results.map((p) => ServicePlace(
         id: p['id'].toString(),
         name: p['name'],
         type: p['type'],
@@ -63,8 +89,6 @@ class ApiService extends ChangeNotifier {
         address: p['address'],
         isCached: p['is_cached'] ?? false,
       )).toList();
-      
-      return places;
     } catch (e) {
       _isOnline = false;
       notifyListeners();
@@ -112,7 +136,7 @@ class ApiService extends ChangeNotifier {
       });
       return response.data;
     } catch (e) {
-      return {'status': 'error', 'message': e.toString()};
+      return _handleError(e);
     }
   }
 
@@ -128,7 +152,7 @@ class ApiService extends ChangeNotifier {
       });
       return response.data;
     } catch (e) {
-      return {'status': 'error', 'message': e.toString()};
+      return _handleError(e);
     }
   }
 
@@ -137,7 +161,7 @@ class ApiService extends ChangeNotifier {
       final response = await _dio.get('${ApiConstants.baseUrl}/api/v1/sos/alerts/$alertId/status');
       return response.data;
     } catch (e) {
-      return {'status': 'error', 'message': e.toString()};
+      return _handleError(e);
     }
   }
   
@@ -162,7 +186,7 @@ class ApiService extends ChangeNotifier {
       final response = await _dio.post(ApiConstants.reportAccidentEndpoint, data: formData);
       return response.data;
     } catch (e) {
-      return {'status': 'error', 'message': e.toString()};
+      return _handleError(e);
     }
   }
   
@@ -174,14 +198,18 @@ class ApiService extends ChangeNotifier {
       );
       return response.data;
     } catch (e) {
-      return {'status': 'error', 'message': e.toString()};
+      return _handleError(e);
     }
   }
   
   Future<Map<String, dynamic>> analyzeAccidentImage(String base64Image) async {
-    final response = await _dio.post(ApiConstants.analyzeImageEndpoint, data: {
-      'image_base64': base64Image,
-    });
-    return response.data;
+    try {
+      final response = await _dio.post(ApiConstants.analyzeImageEndpoint, data: {
+        'image_base64': base64Image,
+      });
+      return response.data;
+    } catch (e) {
+      return _handleError(e);
+    }
   }
 }
