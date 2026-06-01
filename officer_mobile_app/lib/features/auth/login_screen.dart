@@ -148,9 +148,9 @@ class _LoginScreenState extends State<LoginScreen>
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  Color(0xFF020617), // Very dark pure blue
-                  Color(0xFF07122A), // Dark blue
-                  Color(0xFF0F224A), // Less dark blue (no violet)
+                  Color(0xFF041020), // Extremely dark blue
+                  Color(0xFF081C36), // Very dark blue
+                  Color(0xFF0E2849), // Dark blue (no violet)
                 ],
                 stops: [0.0, 0.5, 1.0],
               ),
@@ -452,6 +452,7 @@ class _LoginScreenState extends State<LoginScreen>
                     ),
                   ],
                 ),
+              ),
               ),
             ),
           ),
