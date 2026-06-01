@@ -1,6 +1,6 @@
 [SYSTEM DIRECTIVES FOR AI]
 CRITICAL INSTRUCTION FOR AI AGENTS: You must read this entire file before suggesting changes. At the end of every major task, file creation, or architectural change, you MUST autonomously update this MEMORY.md file to reflect the new state of the project. Do not wait for the user to ask you to update it.
-APK GENERATION RULE: NEVER autonomously build or generate new APKs unless the user explicitly requests one. Even if the user requests an APK, if there are no frontend codebase changes that strictly require a new client-side app installation (e.g., only backend logic changed), you must explain why a new APK is unnecessary and refrain from building it.
+APK GENERATION RULE: NEVER autonomously build or generate new APKs unless the user explicitly requests one. CRITICAL RULE: NEVER PREEMPTIVELY MENTION THAT A NEW APK IS REQUIRED. Do not say "this will require a new APK" in your plans or responses. ONLY discuss APK requirements if the user EXPLICITLY asks you to build an APK. The user has more work to do, and mentioning APKs forces them to reply and slow down. NEVER MENTION APKS UNLESS ASKED.
 
 ## 1. Project Overview
 RoadSOS is an enterprise-grade emergency dispatch and tracking platform. It consists of four integrated applications that allow citizens to trigger SOS alerts, police officers to receive and accept dispatches in real-time, and dispatchers to monitor the entire city via a web dashboard.

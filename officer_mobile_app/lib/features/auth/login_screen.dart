@@ -175,7 +175,7 @@ class _LoginScreenState extends State<LoginScreen>
                     right: -60 + 20 * math.sin(_orbRotation.value),
                     child: _Orb(size: 280, color: const Color(0xFF3B82F6).withOpacity(0.12)),
                   ),
-                  // Mid accent orb (golden — TN Police)
+                  // Mid accent orb (amber)
                   Positioned(
                     top: MediaQuery.of(context).size.height * 0.35 + 20 * math.sin(_orbRotation.value * 0.7),
                     right: -40,
@@ -242,14 +242,14 @@ class _LoginScreenState extends State<LoginScreen>
                               ),
                             ),
                             const SizedBox(height: 20),
-                            // TN Police text
+                            // Main Branding text
                             const Text(
-                              'Tamil Nadu Police',
+                              'ROADSOS',
                               style: TextStyle(
                                 color: Colors.white,
-                                fontSize: 26,
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: 0.5,
+                                fontSize: 32,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 4.0,
                               ),
                             ),
                             const SizedBox(height: 6),
@@ -483,7 +483,7 @@ class _LoginScreenState extends State<LoginScreen>
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            'RoadSOS v1.4.2 · Tamil Nadu Police Dept.',
+                            'RoadSOS v4.2.0 · Emergency Dispatch Platform',
                             style: TextStyle(
                               color: Colors.white.withOpacity(0.18),
                               fontSize: 11,
