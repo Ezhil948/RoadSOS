@@ -210,11 +210,12 @@ class _LoginScreenState extends State<LoginScreen>
                             Container(
                               width: 100,
                               height: 100,
-                            const Icon(
-                              Icons.shield_outlined,
-                              size: 96,
-                              color: Color(0xFF3B82F6), // Bright blue outline
-                            ),
+                              alignment: Alignment.center,
+                              child: const Icon(
+                                Icons.shield_outlined,
+                                size: 96,
+                                color: Color(0xFF3B82F6), // Bright blue outline
+                              ),
                             ),
                             const SizedBox(height: 20),
                             // Main Branding text
