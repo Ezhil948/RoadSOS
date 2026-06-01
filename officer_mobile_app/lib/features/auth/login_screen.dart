@@ -157,34 +157,7 @@ class _LoginScreenState extends State<LoginScreen>
             ),
           ),
 
-          // ── Animated decorative orbs ────────────────────────────────────
-          AnimatedBuilder(
-            animation: _orbRotation,
-            builder: (context, _) {
-              return Stack(
-                children: [
-                  // Top-left large orb
-                  Positioned(
-                    top: -100 + 30 * math.sin(_orbRotation.value),
-                    left: -80 + 20 * math.cos(_orbRotation.value),
-                    child: _Orb(size: 300, color: const Color(0xFF3B82F6).withOpacity(0.25)), // Brighter blue
-                  ),
-                  // Bottom-right orb
-                  Positioned(
-                    bottom: -120 + 25 * math.cos(_orbRotation.value),
-                    right: -60 + 20 * math.sin(_orbRotation.value),
-                    child: _Orb(size: 280, color: const Color(0xFF06B6D4).withOpacity(0.20)), // Cyan
-                  ),
-                  // Mid accent orb (amber)
-                  Positioned(
-                    top: MediaQuery.of(context).size.height * 0.35 + 20 * math.sin(_orbRotation.value * 0.7),
-                    right: -40,
-                    child: _Orb(size: 160, color: const Color(0xFFF59E0B).withOpacity(0.12)), // Brighter amber
-                  ),
-                ],
-              );
-            },
-          ),
+                  // Removed orbs to maintain pure dark blue background
 
           // ── Grid pattern overlay ────────────────────────────────────────
           Positioned.fill(
