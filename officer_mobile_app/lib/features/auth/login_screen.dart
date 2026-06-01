@@ -148,11 +148,11 @@ class _LoginScreenState extends State<LoginScreen>
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  Color(0xFF020817), // near black
-                  Color(0xFF0F172A), // slate 900
-                  Color(0xFF0C1445), // deep navy
+                  Color(0xFF020817), // Near black
+                  Color(0xFF0F172A), // Slate 900
+                  Color(0xFF091438), // Very deep vibrant navy
                 ],
-                stops: [0.0, 0.5, 1.0],
+                stops: [0.0, 0.4, 1.0],
               ),
             ),
           ),
@@ -167,19 +167,19 @@ class _LoginScreenState extends State<LoginScreen>
                   Positioned(
                     top: -100 + 30 * math.sin(_orbRotation.value),
                     left: -80 + 20 * math.cos(_orbRotation.value),
-                    child: _Orb(size: 300, color: const Color(0xFF1E40AF).withOpacity(0.18)),
+                    child: _Orb(size: 300, color: const Color(0xFF3B82F6).withOpacity(0.25)), // Brighter blue
                   ),
                   // Bottom-right orb
                   Positioned(
                     bottom: -120 + 25 * math.cos(_orbRotation.value),
                     right: -60 + 20 * math.sin(_orbRotation.value),
-                    child: _Orb(size: 280, color: const Color(0xFF3B82F6).withOpacity(0.12)),
+                    child: _Orb(size: 280, color: const Color(0xFF06B6D4).withOpacity(0.20)), // Cyan
                   ),
                   // Mid accent orb (amber)
                   Positioned(
                     top: MediaQuery.of(context).size.height * 0.35 + 20 * math.sin(_orbRotation.value * 0.7),
                     right: -40,
-                    child: _Orb(size: 160, color: const Color(0xFFF59E0B).withOpacity(0.08)),
+                    child: _Orb(size: 160, color: const Color(0xFFF59E0B).withOpacity(0.12)), // Brighter amber
                   ),
                 ],
               );
@@ -215,13 +215,19 @@ class _LoginScreenState extends State<LoginScreen>
                                 gradient: const LinearGradient(
                                   begin: Alignment.topLeft,
                                   end: Alignment.bottomRight,
-                                  colors: [Color(0xFF1D4ED8), Color(0xFF1E40AF)],
+                                  colors: [Color(0xFF38BDF8), Color(0xFF1E3A8A)], // Bright Sky Blue to Deep Navy
                                 ),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: const Color(0xFF3B82F6).withOpacity(0.45),
+                                    color: const Color(0xFF38BDF8).withOpacity(0.6),
                                     blurRadius: 30,
+                                    spreadRadius: 8,
+                                  ),
+                                  BoxShadow(
+                                    color: const Color(0xFF1E3A8A).withOpacity(0.4),
+                                    blurRadius: 15,
                                     spreadRadius: 2,
+                                    offset: const Offset(0, 10),
                                   ),
                                 ],
                               ),
@@ -230,13 +236,16 @@ class _LoginScreenState extends State<LoginScreen>
                                 children: [
                                   const Icon(
                                     Icons.shield_rounded,
-                                    size: 68,
-                                    color: Color(0xFF93C5FD),
+                                    size: 60, // Adjusted to match splash
+                                    color: Colors.white,
                                   ),
-                                  const Icon(
-                                    Icons.star_rounded,
-                                    size: 24,
-                                    color: Color(0xFFFBBF24),
+                                  Container(
+                                    margin: const EdgeInsets.only(bottom: 5),
+                                    child: const Icon(
+                                      Icons.star_rounded,
+                                      size: 22,
+                                      color: Color(0xFFFBBF24),
+                                    ),
                                   ),
                                 ],
                               ),
@@ -285,16 +294,23 @@ class _LoginScreenState extends State<LoginScreen>
                         child: Container(
                           decoration: BoxDecoration(
                             borderRadius: BorderRadius.circular(24),
-                            color: const Color(0xFF1E293B).withOpacity(0.7),
+                            color: const Color(0xFF0F172A).withOpacity(0.55), // More translucent for glass effect
                             border: Border.all(
-                              color: Colors.white.withOpacity(0.08),
-                              width: 1.5,
+                              color: Colors.white.withOpacity(0.12),
+                              width: 1.0,
                             ),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withOpacity(0.4),
+                                color: Colors.black.withOpacity(0.5),
                                 blurRadius: 40,
-                                offset: const Offset(0, 16),
+                                spreadRadius: -5,
+                                offset: const Offset(0, 20),
+                              ),
+                              BoxShadow(
+                                color: const Color(0xFF38BDF8).withOpacity(0.05),
+                                blurRadius: 30,
+                                spreadRadius: 0,
+                                offset: const Offset(0, -5),
                               ),
                             ],
                           ),
@@ -396,16 +412,16 @@ class _LoginScreenState extends State<LoginScreen>
                                       borderRadius: BorderRadius.circular(12),
                                       gradient: LinearGradient(
                                         colors: _isLoading
-                                            ? [const Color(0xFF1D4ED8).withOpacity(0.5), const Color(0xFF1E40AF).withOpacity(0.5)]
-                                            : [const Color(0xFF2563EB), const Color(0xFF1D4ED8)],
+                                            ? [const Color(0xFF2563EB).withOpacity(0.5), const Color(0xFF1D4ED8).withOpacity(0.5)]
+                                            : [const Color(0xFF38BDF8), const Color(0xFF2563EB)], // Vibrant gradient
                                       ),
                                       boxShadow: _isLoading
                                           ? []
                                           : [
                                               BoxShadow(
-                                                color: const Color(0xFF3B82F6).withOpacity(0.4),
-                                                blurRadius: 16,
-                                                offset: const Offset(0, 6),
+                                                color: const Color(0xFF38BDF8).withOpacity(0.5),
+                                                blurRadius: 20,
+                                                offset: const Offset(0, 8),
                                               ),
                                             ],
                                     ),

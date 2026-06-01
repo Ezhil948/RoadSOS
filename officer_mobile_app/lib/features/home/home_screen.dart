@@ -326,7 +326,7 @@ class HomeScreen extends ConsumerWidget {
           child: _actionButton(
             Icons.add_circle_rounded,
             'Report Incident',
-            [const Color(0xFF059669), const Color(0xFF10B981)],
+            [const Color(0xFF34D399), const Color(0xFF059669)], // Brighter Emerald
             () => _showReportIncidentSheet(context, ref),
           ),
         ),
@@ -335,7 +335,7 @@ class HomeScreen extends ConsumerWidget {
           child: _actionButton(
             Icons.share_location_rounded,
             'Share Location',
-            [const Color(0xFF1D4ED8), const Color(0xFF3B82F6)],
+            [const Color(0xFF60A5FA), const Color(0xFF2563EB)], // Brighter Blue
             () => _showShareLocationSheet(context),
           ),
         ),

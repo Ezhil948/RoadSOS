@@ -67,13 +67,19 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                     gradient: const LinearGradient(
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
-                      colors: [Color(0xFF1D4ED8), Color(0xFF1E40AF)],
+                      colors: [Color(0xFF38BDF8), Color(0xFF1E3A8A)], // Bright Sky Blue to Deep Navy
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFF3B82F6).withOpacity(0.5),
-                        blurRadius: 40,
-                        spreadRadius: 4,
+                        color: const Color(0xFF38BDF8).withOpacity(0.6),
+                        blurRadius: 30,
+                        spreadRadius: 8,
+                      ),
+                      BoxShadow(
+                        color: const Color(0xFF1E3A8A).withOpacity(0.4),
+                        blurRadius: 15,
+                        spreadRadius: 2,
+                        offset: const Offset(0, 10),
                       ),
                     ],
                   ),
@@ -82,13 +88,16 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
                     children: [
                       const Icon(
                         Icons.shield_rounded,
-                        size: 80,
-                        color: Color(0xFF93C5FD),
-                      ),
-                      const Icon(
-                        Icons.star_rounded,
-                        size: 28,
+                        size: 72,
                         color: Colors.white,
+                      ),
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 6),
+                        child: const Icon(
+                          Icons.star_rounded,
+                          size: 26,
+                          color: Color(0xFFFBBF24),
+                        ),
                       ),
                     ],
                   ),
