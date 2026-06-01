@@ -1,5 +1,6 @@
 [SYSTEM DIRECTIVES FOR AI]
 CRITICAL INSTRUCTION FOR AI AGENTS: You must read this entire file before suggesting changes. At the end of every major task, file creation, or architectural change, you MUST autonomously update this MEMORY.md file to reflect the new state of the project. Do not wait for the user to ask you to update it.
+APK GENERATION RULE: NEVER autonomously build or generate new APKs unless the user explicitly requests one. Even if the user requests an APK, if there are no frontend codebase changes that strictly require a new client-side app installation (e.g., only backend logic changed), you must explain why a new APK is unnecessary and refrain from building it.
 
 ## 1. Project Overview
 RoadSOS is an enterprise-grade emergency dispatch and tracking platform. It consists of four integrated applications that allow citizens to trigger SOS alerts, police officers to receive and accept dispatches in real-time, and dispatchers to monitor the entire city via a web dashboard.
@@ -44,6 +45,8 @@ RoadSOS/
 - **Database Optimization**: Heavy O(N) memory bottlenecks have been completely eliminated. Geo-spatial Haversine distance sorting is now performed instantly at the MySQL database layer using `func.acos`.
 - **Backend Clean Architecture**: The massive "Fat Controllers" for the `SOS`, `Dispatch`, `Auth`, and `Accident Reports` modules have been successfully broken down into Data Repositories and Domain Use Cases.
 - **Frontend/Mobile Clean Architecture**: The complex state loops (e.g., polling timers, hardware sirens, offline SMS fallbacks) have been successfully decoupled from the UI widgets in the Citizen App, Officer App, and React Dashboard.
+- **Production Deployment**: All local backend Clean Architecture code has been pushed to `main` and is actively deploying to the Render production server (`roadsos-backend-htmk.onrender.com`). Both Flutter apps have been reverted to point back to the production API.
 
 ## 5. Work In Progress & Next Steps
-- **Complete the Refactor**: The backend Clean Architecture migration is fully complete. Next steps depend on priority (e.g., frontend integration tests, new feature development, or refactoring the next vertical slice).
+- **Wait for Render Deployment**: Once Render finishes building the new backend, the `v4.1` APKs (which point to production) should instantly start receiving SOS dispatches natively using the new `DispatchUseCase` logic.
+- **Next Feature**: Build out the React Admin Dashboard vertical slice or proceed with end-to-end integration testing across the production environment.

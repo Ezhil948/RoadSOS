@@ -22,4 +22,5 @@ class SosStatus {
       status == 'cancelled_by_citizen';
       
   bool get isPoliceCancelled => status == 'cancelled_by_police';
+  bool get isNoOfficers => status == 'no_officers_available';
 }

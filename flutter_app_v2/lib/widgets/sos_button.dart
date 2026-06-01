@@ -279,6 +279,31 @@ class _SOSButtonState extends State<SOSButton> with SingleTickerProviderStateMix
           ),
         );
         return;
+      } else if (res['status'] == 'no_officers_available') {
+        setState(() {
+          _isActivated = false;
+          _activeAlertId = null;
+          _canCancel = false;
+          _policeCancelled = false;
+          _sosStatusText = 'NO OFFICERS';
+          _sosSubText = 'Call 112 immediately';
+        });
+        timer.cancel();
+        _cancelTimer?.cancel();
+        _timeoutTimer?.cancel();
+        _updateAnimationState();
+        
+        final box = await Hive.openBox('settings');
+        await box.delete('last_sos_id');
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('No officers available nearby. Please call 112.'), 
+            backgroundColor: AppTheme.primaryRed,
+            duration: Duration(seconds: 10),
+          ),
+        );
+        return;
       }
       
       if (res['is_dispatched'] == true && res['officer'] != null) {
@@ -472,6 +497,17 @@ class _SOSButtonState extends State<SOSButton> with SingleTickerProviderStateMix
               },
               icon: const Icon(Icons.keyboard_arrow_down, color: AppTheme.primaryRed),
               label: const Text('View Reason', style: TextStyle(color: AppTheme.primaryRed, fontWeight: FontWeight.bold, fontSize: 16)),
+            ),
+          ),
+        if (!_isActivated && _sosStatusText == 'NO OFFICERS')
+          Padding(
+            padding: const EdgeInsets.only(top: 16.0),
+            child: TextButton.icon(
+              onPressed: () {
+                launchUrl(Uri.parse('tel:112'));
+              },
+              icon: const Icon(Icons.phone, color: AppTheme.primaryRed),
+              label: const Text('Call 112 Now', style: TextStyle(color: AppTheme.primaryRed, fontWeight: FontWeight.bold, fontSize: 16)),
             ),
           ),
       ],

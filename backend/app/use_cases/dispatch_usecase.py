@@ -68,7 +68,17 @@ class DispatchUseCase:
                 pinged_officers.remove(officer_id)
                 alert.pinged_officer_ids = pinged_officers
                 
+            rejected_officers = alert.rejected_officer_ids or []
+            if isinstance(rejected_officers, str):
+                rejected_officers = json.loads(rejected_officers)
+            if officer_id not in rejected_officers:
+                rejected_officers.append(officer_id)
+                alert.rejected_officer_ids = rejected_officers
+                
             await self.repo.log_event(f"DISPATCH_{action.upper()}", {"alert_id": alert_id, "officer_id": officer_id})
+            
+            # Trigger dispatch to find the next available officer, excluding this one
+            await self.find_and_assign_officers(alert_id)
             return {"status": action}
             
         return {"error": "Invalid action", "status_code": 400}
@@ -78,9 +88,16 @@ class DispatchUseCase:
         if not alert or not alert.latitude or not alert.longitude:
             return {"status": "error", "message": "Alert not found or invalid location"}
 
-        top_officers_data = await self.repo.find_nearest_officers(alert.latitude, alert.longitude, limit=5)
+        rejected_ids = alert.rejected_officer_ids or []
+        if isinstance(rejected_ids, str):
+            rejected_ids = json.loads(rejected_ids)
+
+        top_officers_data = await self.repo.find_nearest_officers(
+            alert.latitude, alert.longitude, limit=5, excluded_ids=rejected_ids
+        )
 
         if not top_officers_data:
+            alert.status = "no_officers_available"
             return {"status": "no_officers"}
 
         all_officer_ids = [row.Officer.id for row in top_officers_data]

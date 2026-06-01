@@ -102,6 +102,7 @@ async def lifespan(app: FastAPI):
                 "ALTER TABLE sos_alerts ADD COLUMN requester_id VARCHAR(255);",
                 "ALTER TABLE sos_alerts ADD COLUMN alert_type VARCHAR(50) DEFAULT 'citizen_sos';",
                 "ALTER TABLE sos_alerts ADD COLUMN pinged_officer_ids JSON;",
+                "ALTER TABLE sos_alerts ADD COLUMN rejected_officer_ids JSON;",
                 "ALTER TABLE sos_alerts ADD COLUMN accepted_officer_id INTEGER;"
             ]
             for mig in migrations:

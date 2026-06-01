@@ -54,7 +54,7 @@ class DispatchRepository:
         ))
         await self.session.flush()
 
-    async def find_nearest_officers(self, alert_lat: float, alert_lng: float, limit: int = 5):
+    async def find_nearest_officers(self, alert_lat: float, alert_lng: float, limit: int = 5, excluded_ids: list = None):
         import math
         lat_delta = 50.0 / 111.0
         lng_delta = 50.0 / (111.0 * math.cos(math.radians(alert_lat)))
@@ -75,7 +75,12 @@ class DispatchRepository:
             Officer.status == "available",
             Officer.latitude.between(alert_lat - lat_delta, alert_lat + lat_delta),
             Officer.longitude.between(alert_lng - lng_delta, alert_lng + lng_delta)
-        ).order_by("distance").limit(limit)
+        )
+        
+        if excluded_ids:
+            query = query.where(Officer.id.notin_(excluded_ids))
+            
+        query = query.order_by("distance").limit(limit)
         
         result = await self.session.execute(query)
         return result.all() # list of (Officer, distance) tuples

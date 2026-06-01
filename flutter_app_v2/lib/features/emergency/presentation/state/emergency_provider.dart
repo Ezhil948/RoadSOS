@@ -4,7 +4,7 @@ import '../../domain/entities/sos_status.dart';
 import '../../domain/repositories/iemergency_repository.dart';
 import '../../domain/use_cases/send_sos_usecase.dart';
 
-enum SosUiState { idle, sending, searching, onWay, here, cancelled, smsSent }
+enum SosUiState { idle, sending, searching, onWay, here, cancelled, smsSent, noOfficers }
 
 class EmergencyProvider extends ChangeNotifier {
   final SendSosUseCase sendSosUseCase;
@@ -73,6 +73,12 @@ class EmergencyProvider extends ChangeNotifier {
       if (status.isPoliceCancelled) {
         _policeCancelReason = status.cancellationReason;
         _uiState = SosUiState.cancelled;
+        _clearState();
+        return;
+      }
+      
+      if (status.isNoOfficers) {
+        _uiState = SosUiState.noOfficers;
         _clearState();
         return;
       }

@@ -37,6 +37,7 @@ class AlertStatusEnum(str, enum.Enum):
     cancelled = "cancelled"
     cancelled_by_police = "cancelled_by_police"
     cancelled_by_citizen = "cancelled_by_citizen"
+    no_officers_available = "no_officers_available"
 
 
 class AccidentStatusEnum(str, enum.Enum):
@@ -79,6 +80,7 @@ class SOSAlert(Base):
     
     # Stateless Dispatch Additions
     pinged_officer_ids = Column(JSON, default=list)
+    rejected_officer_ids = Column(JSON, default=list)
     accepted_officer_id = Column(Integer, nullable=True)
     
     # Cancellation Details
