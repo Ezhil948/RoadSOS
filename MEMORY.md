@@ -45,8 +45,8 @@ RoadSOS/
 - **Database Optimization**: Heavy O(N) memory bottlenecks have been completely eliminated. Geo-spatial Haversine distance sorting is now performed instantly at the MySQL database layer using `func.acos`.
 - **Backend Clean Architecture**: The massive "Fat Controllers" for the `SOS`, `Dispatch`, `Auth`, and `Accident Reports` modules have been successfully broken down into Data Repositories and Domain Use Cases.
 - **Frontend/Mobile Clean Architecture**: The complex state loops (e.g., polling timers, hardware sirens, offline SMS fallbacks) have been successfully decoupled from the UI widgets in the Citizen App, Officer App, and React Dashboard.
-- **Production Deployment**: All local backend Clean Architecture code has been pushed to `main` and is actively deploying to the Render production server (`roadsos-backend-htmk.onrender.com`). Both Flutter apps have been reverted to point back to the production API.
+- **Officer App UI Revamp**: The Officer Mobile App has received a major aesthetic overhaul, including a premium glassmorphic login screen, completely redesigned custom shields/badges, an updated Splash Screen, and a much cleaner, compact Home Duty layout with refined metrics and action buttons. Settings UI has also been decluttered.
 
 ## 5. Work In Progress & Next Steps
-- **Wait for Render Deployment**: Once Render finishes building the new backend, the `v4.1` APKs (which point to production) should instantly start receiving SOS dispatches natively using the new `DispatchUseCase` logic.
-- **Next Feature**: Build out the React Admin Dashboard vertical slice or proceed with end-to-end integration testing across the production environment.
+- **Web Admin Dashboard UI**: Build out the React Admin Dashboard vertical slice or proceed with end-to-end integration testing across the production environment.
+- **Flutter Web Finalization**: Ensure all UI tweaks in the Officer App remain responsive across different environments.
