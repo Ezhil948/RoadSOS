@@ -50,71 +50,125 @@ class HomeScreen extends ConsumerWidget {
 
   Widget _buildStatusBar(BuildContext context, WidgetRef ref, OfficerStatus status) {
     bool isOnline = status is! Offline;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     
-    return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      child: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Row(
-          children: [
-            Container(
-              width: 50,
-              height: 50,
-              decoration: BoxDecoration(
-                color: kAccentBlue.withOpacity(0.1),
-                shape: BoxShape.circle,
+    return Container(
+      padding: const EdgeInsets.all(20.0),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: isOnline ? kAccentGreen.withOpacity(0.3) : (isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0))),
+        boxShadow: [
+          BoxShadow(
+            color: isOnline ? kAccentGreen.withOpacity(0.08) : Colors.black.withOpacity(0.05),
+            blurRadius: 24,
+            spreadRadius: 2,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          // The Premium Shield
+          Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: isOnline 
+                  ? [const Color(0xFF10B981), const Color(0xFF047857)] // Emerald green glow when online
+                  : [const Color(0xFF3B82F6), const Color(0xFF1D4ED8)], // Standard blue when offline
               ),
-              child: const Icon(Icons.shield_outlined, color: kAccentBlue, size: 28),
-            ),
-            const SizedBox(width: 16),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(Hive.box('settings').get('officer_name', defaultValue: 'OFFICER').toString().toUpperCase(), style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 4),
-                  Text('Badge #${Hive.box('settings').get('badge_number', defaultValue: '----')}', style: AppTheme.monoSm.copyWith(color: kDarkMuted)),
-                ],
-              ),
-            ),
-            Column(
-              children: [
-                Switch(
-                  value: isOnline,
-                  activeColor: kAccentGreen,
-                  onChanged: (val) async {
-                    if (val) {
-                      try {
-                        await ref.read(dispatchProvider.notifier).goOnline();
-                      } catch (e) {
-                        if (context.mounted) {
-                          final msg = e.toString().replaceAll('Exception: ', '');
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(msg),
-                              backgroundColor: kAccentRed,
-                              action: msg.contains('permanently denied') || msg.contains('permission') 
-                                ? SnackBarAction(
-                                    label: 'SETTINGS',
-                                    textColor: Colors.white,
-                                    onPressed: () => Geolocator.openAppSettings(),
-                                  )
-                                : null,
-                            ),
-                          );
-                        }
-                      }
-                    } else {
-                      ref.read(dispatchProvider.notifier).goOffline();
-                    }
-                  },
+              boxShadow: [
+                BoxShadow(
+                  color: (isOnline ? kAccentGreen : kAccentBlue).withOpacity(0.4),
+                  blurRadius: 16,
+                  spreadRadius: 2,
                 ),
-                Text(isOnline ? 'Active' : 'Offline', style: TextStyle(color: isOnline ? kAccentGreen : kDarkMuted, fontSize: 12, fontWeight: FontWeight.bold)),
               ],
-            )
-          ],
-        ),
+            ),
+            child: const Stack(
+              alignment: Alignment.center,
+              children: [
+                Icon(Icons.shield_rounded, color: Colors.white, size: 32),
+                Icon(Icons.star_rounded, color: Colors.white, size: 12),
+              ],
+            ),
+          ),
+          const SizedBox(width: 20),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  Hive.box('settings').get('officer_name', defaultValue: 'OFFICER').toString().toUpperCase(), 
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w800, fontSize: 18, letterSpacing: 0.5),
+                ),
+                const SizedBox(height: 4),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    'BADGE #${Hive.box('settings').get('badge_number', defaultValue: '----')}', 
+                    style: const TextStyle(color: kDarkMuted, fontSize: 11, fontWeight: FontWeight.bold, letterSpacing: 1.0),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Column(
+            children: [
+              Switch(
+                value: isOnline,
+                activeColor: kAccentGreen,
+                activeTrackColor: kAccentGreen.withOpacity(0.2),
+                inactiveThumbColor: kDarkMuted,
+                inactiveTrackColor: isDark ? const Color(0xFF0F172A) : const Color(0xFFF1F5F9),
+                onChanged: (val) async {
+                  if (val) {
+                    try {
+                      await ref.read(dispatchProvider.notifier).goOnline();
+                    } catch (e) {
+                      if (context.mounted) {
+                        final msg = e.toString().replaceAll('Exception: ', '');
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(msg),
+                            backgroundColor: kAccentRed,
+                            action: msg.contains('permanently denied') || msg.contains('permission') 
+                              ? SnackBarAction(
+                                  label: 'SETTINGS',
+                                  textColor: Colors.white,
+                                  onPressed: () => Geolocator.openAppSettings(),
+                                )
+                              : null,
+                          ),
+                        );
+                      }
+                    }
+                  } else {
+                    ref.read(dispatchProvider.notifier).goOffline();
+                  }
+                },
+              ),
+              Text(
+                isOnline ? 'ACTIVE' : 'OFFLINE', 
+                style: TextStyle(
+                  color: isOnline ? kAccentGreen : kDarkMuted, 
+                  fontSize: 10, 
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 1.0,
+                ),
+              ),
+            ],
+          )
+        ],
       ),
     );
   }
@@ -126,18 +180,33 @@ class HomeScreen extends ConsumerWidget {
 
 
   Widget _buildActivityFeed(BuildContext context) {
-    return ListView(
-      children: const [
-        Padding(
-          padding: EdgeInsets.all(32.0),
-          child: Center(
-            child: Text(
-              'No recent shift activity.',
-              style: TextStyle(color: kDarkMuted),
+    return ScrollConfiguration(
+      behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false),
+      child: ListView(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(40.0),
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.history_rounded, size: 64, color: kDarkMuted.withOpacity(0.3)),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'No Recent Activity',
+                    style: TextStyle(color: kDarkMuted, fontSize: 16, fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Your shift timeline will appear here.',
+                    style: TextStyle(color: kDarkMuted.withOpacity(0.7), fontSize: 13),
+                  ),
+                ],
+              ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
@@ -147,15 +216,18 @@ class HomeScreen extends ConsumerWidget {
       children: [
         const SectionHeader(title: 'TODAY\'S SHIFT'),
         Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Expanded(child: _kpiChip(Icons.local_police_outlined, 'Dispatches', '0', kAccentBlue)),
-            const SizedBox(width: 8),
-            Expanded(child: _kpiChip(Icons.timer_outlined, 'Avg Response', '-- min', kAccentAmber)),
-            const SizedBox(width: 8),
-            Expanded(child: _kpiChip(Icons.route_outlined, 'Patrolled', '0.0 km', kAccentGreen)),
-            const SizedBox(width: 8),
-            Expanded(child: _kpiChip(Icons.check_circle_outline, 'Resolved', '0%', kAccentGreen)),
+            Expanded(child: _kpiChip(context, Icons.local_police_rounded, 'Dispatches', '0', const Color(0xFF3B82F6))),
+            const SizedBox(width: 12),
+            Expanded(child: _kpiChip(context, Icons.timer_rounded, 'Avg Response', '-- min', const Color(0xFFF59E0B))),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Row(
+          children: [
+            Expanded(child: _kpiChip(context, Icons.route_rounded, 'Patrolled', '0.0 km', const Color(0xFF10B981))),
+            const SizedBox(width: 12),
+            Expanded(child: _kpiChip(context, Icons.check_circle_rounded, 'Resolved', '0%', const Color(0xFF10B981))),
           ],
         ),
         const SizedBox(height: 32),
@@ -163,22 +235,34 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _kpiChip(IconData icon, String title, String value, Color color) {
+  Widget _kpiChip(BuildContext context, IconData icon, String title, String value, Color color) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.08),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: color.withOpacity(0.2)),
+        color: isDark ? const Color(0xFF1E293B) : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: isDark ? const Color(0xFF334155) : const Color(0xFFE2E8F0)),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4)),
+        ],
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, size: 16, color: color),
-          const SizedBox(height: 8),
-          Text(title, style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.bold), overflow: TextOverflow.ellipsis),
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.15),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, size: 20, color: color),
+          ),
+          const SizedBox(height: 12),
+          Text(title, style: const TextStyle(color: kDarkMuted, fontSize: 12, fontWeight: FontWeight.w600), overflow: TextOverflow.ellipsis),
           const SizedBox(height: 4),
-          Text(value, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold), textAlign: TextAlign.center, maxLines: 1, overflow: TextOverflow.ellipsis),
+          Text(value, style: TextStyle(color: isDark ? Colors.white : Colors.black87, fontSize: 20, fontWeight: FontWeight.w800), maxLines: 1, overflow: TextOverflow.ellipsis),
         ],
       ),
     );
@@ -240,18 +324,18 @@ class HomeScreen extends ConsumerWidget {
       children: [
         Expanded(
           child: _actionButton(
-            Icons.add_circle_outline,
+            Icons.add_circle_rounded,
             'Report Incident',
-            kAccentGreen,
+            [const Color(0xFF059669), const Color(0xFF10B981)],
             () => _showReportIncidentSheet(context, ref),
           ),
         ),
-        const SizedBox(width: 12),
+        const SizedBox(width: 16),
         Expanded(
           child: _actionButton(
-            Icons.share_location_outlined,
+            Icons.share_location_rounded,
             'Share Location',
-            kAccentBlue,
+            [const Color(0xFF1D4ED8), const Color(0xFF3B82F6)],
             () => _showShareLocationSheet(context),
           ),
         ),
@@ -259,25 +343,36 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 
-  Widget _actionButton(IconData icon, String label, Color color, VoidCallback onTap) {
-    return GestureDetector(
+  Widget _actionButton(IconData icon, String label, List<Color> gradientColors, VoidCallback onTap) {
+    return InkWell(
       onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
       child: Container(
-        height: 48,
+        height: 56,
         decoration: BoxDecoration(
-          color: color.withOpacity(0.08),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: color.withOpacity(0.3)),
+          gradient: LinearGradient(
+            colors: gradientColors,
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: gradientColors.last.withOpacity(0.3),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
+            ),
+          ],
         ),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, color: color, size: 18),
+            Icon(icon, color: Colors.white, size: 20),
             const SizedBox(width: 8),
             Flexible(
               child: Text(
                 label,
-                style: TextStyle(color: color, fontSize: 13, fontWeight: FontWeight.w600),
+                style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w700, letterSpacing: 0.5),
                 overflow: TextOverflow.ellipsis,
               ),
             ),

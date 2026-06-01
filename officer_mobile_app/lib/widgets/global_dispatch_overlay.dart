@@ -315,7 +315,6 @@ class _GlobalDispatchOverlayState extends ConsumerState<GlobalDispatchOverlay> w
           ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 }
