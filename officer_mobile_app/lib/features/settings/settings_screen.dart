@@ -30,7 +30,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   double _autoRejectSeconds = 30.0;
   String _navApp = 'Google Maps';
   String _language = 'English';
-  late TextEditingController _iceController;
 
   @override
   void initState() {
@@ -50,9 +49,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     _autoRejectSeconds = _settingsBox.get('auto_reject_seconds', defaultValue: 30.0);
     _navApp = _settingsBox.get('nav_app', defaultValue: 'Google Maps');
     _language = _settingsBox.get('language', defaultValue: 'English');
-    
-    final savedIce = _settingsBox.get('ice_contact', defaultValue: '');
-    _iceController = TextEditingController(text: savedIce);
   }
 
   void _saveSetting(String key, dynamic value) {
@@ -63,7 +59,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   @override
   void dispose() {
-    _iceController.dispose();
     super.dispose();
   }
 
@@ -341,40 +336,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               ),
             ),
             const SizedBox(height: 32),
-
-            const SectionHeader(title: 'EMERGENCY'),
-
-            // ICE Contact
-            Text('In Case of Emergency (ICE) Contact:', style: Theme.of(context).textTheme.labelLarge),
-            const SizedBox(height: 8),
-            TextField(
-              controller: _iceController,
-              keyboardType: TextInputType.phone,
-              style: AppTheme.monoSm.copyWith(color: textColor),
-              decoration: InputDecoration(
-                filled: true,
-                fillColor: surfaceColor,
-                hintText: 'e.g. +91 98765 43210',
-                hintStyle: AppTheme.monoSm.copyWith(color: mutedColor),
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(6),
-                  borderSide: BorderSide(color: borderColor),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(6),
-                  borderSide: BorderSide(color: borderColor),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(6),
-                  borderSide: const BorderSide(color: kAccentGreen),
-                ),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              ),
-              onChanged: (val) {
-                _saveSetting('ice_contact', val);
-              },
-            ),
-            const SizedBox(height: 24),
 
             // Version info
             Center(
