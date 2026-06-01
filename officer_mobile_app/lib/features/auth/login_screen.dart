@@ -211,43 +211,35 @@ class _LoginScreenState extends State<LoginScreen>
                               width: 100,
                               height: 100,
                               decoration: BoxDecoration(
-                                shape: BoxShape.circle,
+                                borderRadius: BorderRadius.circular(20),
                                 gradient: const LinearGradient(
                                   begin: Alignment.topLeft,
                                   end: Alignment.bottomRight,
-                                  colors: [Color(0xFF38BDF8), Color(0xFF1E3A8A)], // Bright Sky Blue to Deep Navy
+                                  colors: [Color(0xFF1E293B), Color(0xFF0F172A)], // Slate 800 to Slate 900
+                                ),
+                                border: Border.all(
+                                  color: const Color(0xFF475569).withOpacity(0.5),
+                                  width: 1.5,
                                 ),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: const Color(0xFF38BDF8).withOpacity(0.6),
+                                    color: Colors.black.withOpacity(0.6),
                                     blurRadius: 30,
-                                    spreadRadius: 8,
+                                    offset: const Offset(0, 15),
                                   ),
                                   BoxShadow(
-                                    color: const Color(0xFF1E3A8A).withOpacity(0.4),
-                                    blurRadius: 15,
-                                    spreadRadius: 2,
-                                    offset: const Offset(0, 10),
+                                    color: const Color(0xFF3B82F6).withOpacity(0.15),
+                                    blurRadius: 20,
+                                    spreadRadius: -5,
                                   ),
                                 ],
                               ),
-                              child: Stack(
-                                alignment: Alignment.center,
-                                children: [
-                                  const Icon(
-                                    Icons.shield_rounded,
-                                    size: 60, // Adjusted to match splash
-                                    color: Colors.white,
-                                  ),
-                                  Container(
-                                    margin: const EdgeInsets.only(bottom: 5),
-                                    child: const Icon(
-                                      Icons.star_rounded,
-                                      size: 22,
-                                      color: Color(0xFFFBBF24),
-                                    ),
-                                  ),
-                                ],
+                              child: const Center(
+                                child: Icon(
+                                  Icons.local_police_rounded, // New distinct badge icon
+                                  size: 54, // Adjusted for login screen
+                                  color: Color(0xFF94A3B8), // Metallic silver/slate
+                                ),
                               ),
                             ),
                             const SizedBox(height: 20),
@@ -412,16 +404,16 @@ class _LoginScreenState extends State<LoginScreen>
                                       borderRadius: BorderRadius.circular(12),
                                       gradient: LinearGradient(
                                         colors: _isLoading
-                                            ? [const Color(0xFF2563EB).withOpacity(0.5), const Color(0xFF1D4ED8).withOpacity(0.5)]
-                                            : [const Color(0xFF38BDF8), const Color(0xFF2563EB)], // Vibrant gradient
+                                            ? [const Color(0xFF334155), const Color(0xFF1E293B)] // Muted loading
+                                            : [const Color(0xFF2563EB), const Color(0xFF1D4ED8)], // Sophisticated deep blue
                                       ),
                                       boxShadow: _isLoading
                                           ? []
                                           : [
                                               BoxShadow(
-                                                color: const Color(0xFF38BDF8).withOpacity(0.5),
-                                                blurRadius: 20,
-                                                offset: const Offset(0, 8),
+                                                color: const Color(0xFF1D4ED8).withOpacity(0.4),
+                                                blurRadius: 15,
+                                                offset: const Offset(0, 6),
                                               ),
                                             ],
                                     ),
