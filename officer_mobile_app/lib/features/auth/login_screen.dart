@@ -148,11 +148,11 @@ class _LoginScreenState extends State<LoginScreen>
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  Color(0xFF0F172A), // Dark Navy
-                  Color(0xFF1E3A8A), // Deep Blue
-                  Color(0xFF1D4ED8), // Blue 700
+                  Color(0xFF020817), // Near black
+                  Color(0xFF0F172A), // Slate 900
+                  Color(0xFF0C1445), // Deep navy
                 ],
-                stops: [0.0, 0.6, 1.0],
+                stops: [0.0, 0.5, 1.0],
               ),
             ),
           ),
@@ -194,7 +194,9 @@ class _LoginScreenState extends State<LoginScreen>
           // ── Main content ────────────────────────────────────────────────
           SafeArea(
             child: Center(
-              child: SingleChildScrollView(
+              child: ScrollConfiguration(
+                behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false),
+                child: SingleChildScrollView(
                 padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 32),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
