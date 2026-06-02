@@ -4,6 +4,8 @@ import { StatusBadge } from '../widgets/StatusBadge';
 import { api } from '../../api';
 
 // Helper for relative time (same as LiveIncidentCard)
+const API_BASE_URL = import.meta.env.VITE_API_URL ? import.meta.env.VITE_API_URL.replace('/api/v1', '') : 'http://localhost:8000';
+
 function timeAgo(dateInput) {
   if (!dateInput) return '';
   const date = new Date(dateInput);
@@ -29,7 +31,7 @@ export const IncidentModal = ({ incident, type, onClose, onStatusChange }) => {
         .then(data => setDetails(data))
         .finally(() => setLoading(false));
     }
-  }, [incident, type]);
+  }, [incident.id, type]);
 
   const isSOS = type === 'sos';
   const isActive = isSOS ? incident.status === 'active' : incident.status !== 'resolved';
@@ -187,7 +189,7 @@ export const IncidentModal = ({ incident, type, onClose, onStatusChange }) => {
               {details.image_path && (
                 <div>
                   <div style={{ fontFamily: 'Syne, sans-serif', fontSize: '13px', fontWeight: 700, letterSpacing: '0.08em', color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '8px' }}>Evidence Image</div>
-                  <img src={`http://localhost:8000/${details.image_path}`} alt="Accident" style={{ width: '100%', borderRadius: 'var(--radius-sm)', marginTop: '8px' }} />
+                  <img src={`${API_BASE_URL}/${details.image_path}`} alt="Accident" style={{ width: '100%', borderRadius: 'var(--radius-sm)', marginTop: '8px' }} />
                 </div>
               )}
             </>
