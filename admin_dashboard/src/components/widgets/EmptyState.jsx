@@ -12,16 +12,6 @@ export function EmptyState({ icon, message }) {
       padding: 'var(--space-10) var(--space-6)',
       position: 'relative'
     }}>
-      {/* Background glow */}
-      <div style={{
-        position: 'absolute',
-        width: '60px',
-        height: '60px',
-        background: 'var(--border-default)',
-        filter: 'blur(24px)',
-        borderRadius: '50%',
-        zIndex: 0
-      }} />
       
       <div style={{ zIndex: 1, marginBottom: 'var(--space-4)' }}>
         {clonedIcon}
