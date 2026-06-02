@@ -21,6 +21,8 @@ class SOSRequest(BaseModel):
     severity: str = Field("critical", max_length=20)
     message: Optional[str] = Field(None, max_length=1000)
     device_id: Optional[str] = Field(None, max_length=100)
+    citizen_name: Optional[str] = Field(None, max_length=255)
+    citizen_phone: Optional[str] = Field(None, max_length=50)
 
 class SOSResponse(BaseModel):
     status: str

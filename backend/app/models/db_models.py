@@ -70,6 +70,9 @@ class SOSAlert(Base):
     alerted_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)
     resolved_at = Column(DateTime(timezone=True), nullable=True)
 
+    citizen_name = Column(String(255), nullable=True)
+    citizen_phone = Column(String(50), nullable=True)
+
     # Overhaul additions
     reporters = Column(JSON, default=list)
     location_update_pending = Column(Boolean, default=False)
@@ -119,6 +122,9 @@ class AccidentReport(Base):
     status = Column(Enum(AccidentStatusEnum), default=AccidentStatusEnum.open, index=True)
     reported_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)
     updated_at = Column(DateTime(timezone=True), onupdate=func.now(), nullable=True)
+
+    citizen_name = Column(String(255), nullable=True)
+    citizen_phone = Column(String(50), nullable=True)
 
     # Relationships
     sos_alerts = relationship("SOSAlert", back_populates="accident_report", foreign_keys="SOSAlert.accident_report_id")

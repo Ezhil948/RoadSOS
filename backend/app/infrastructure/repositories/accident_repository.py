@@ -18,7 +18,7 @@ class AccidentRepository:
     async def commit(self):
         await self.session.commit()
 
-    async def create_report(self, latitude: float, longitude: float, severity: str, casualties: int, description: str) -> AccidentReport:
+    async def create_report(self, latitude: float, longitude: float, severity: str, casualties: int, description: str, citizen_name: str = None, citizen_phone: str = None) -> AccidentReport:
         report = AccidentReport(
             latitude=latitude,
             longitude=longitude,
@@ -27,6 +27,8 @@ class AccidentRepository:
             description=description,
             image_path=None,
             status="open",
+            citizen_name=citizen_name,
+            citizen_phone=citizen_phone
         )
         self.add(report)
         return report
@@ -39,14 +41,16 @@ class AccidentRepository:
             log_metadata=metadata,
         ))
 
-    async def create_sos_alert(self, latitude: float, longitude: float, severity: str, message: str) -> SOSAlert:
+    async def create_sos_alert(self, latitude: float, longitude: float, severity: str, message: str, citizen_name: str = None, citizen_phone: str = None) -> SOSAlert:
         alert = SOSAlert(
             latitude=latitude,
             longitude=longitude,
             severity=severity,
             message=message,
             device_id="accident_report",
-            status="active"
+            status="active",
+            citizen_name=citizen_name,
+            citizen_phone=citizen_phone
         )
         self.add(alert)
         return alert

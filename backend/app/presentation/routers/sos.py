@@ -34,7 +34,7 @@ def get_sos_usecase(db: AsyncSession = Depends(get_db)) -> SOSUseCase:
 @router.post("/alert", response_model=SOSResponse, summary="Trigger SOS emergency alert")
 async def send_sos_alert(payload: SOSRequest, usecase: SOSUseCase = Depends(get_sos_usecase)):
     result = await usecase.send_sos_alert(
-        payload.latitude, payload.longitude, payload.severity, payload.message, payload.device_id
+        payload.latitude, payload.longitude, payload.severity, payload.message, payload.device_id, payload.citizen_name, payload.citizen_phone
     )
     if "error" in result:
         raise HTTPException(status_code=result.get("status_code", 400), detail=result["error"])

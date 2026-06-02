@@ -31,14 +31,16 @@ class SOSRepository:
         result = await self.session.execute(query)
         return result.scalars().all()
 
-    async def create_alert(self, lat: float, lng: float, severity: str, message: str, device_id: str) -> SOSAlert:
+    async def create_alert(self, lat: float, lng: float, severity: str, message: str, device_id: str, citizen_name: str = None, citizen_phone: str = None) -> SOSAlert:
         alert = SOSAlert(
             latitude=lat,
             longitude=lng,
             severity=severity,
             message=message,
             device_id=device_id,
-            status="active"
+            status="active",
+            citizen_name=citizen_name,
+            citizen_phone=citizen_phone
         )
         self.session.add(alert)
         await self.session.flush()

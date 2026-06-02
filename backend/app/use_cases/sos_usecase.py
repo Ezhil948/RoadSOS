@@ -9,7 +9,7 @@ class SOSUseCase:
         self.repo = repo
         self.dispatch_trigger = dispatch_trigger_fn
 
-    async def send_sos_alert(self, lat: float, lng: float, severity: str, message: str, device_id: str):
+    async def send_sos_alert(self, lat: float, lng: float, severity: str, message: str, device_id: str, citizen_name: str = None, citizen_phone: str = None):
         if device_id:
             recent_alert = await self.repo.get_recent_alert_by_device(device_id)
             if recent_alert:
@@ -34,7 +34,7 @@ class SOSUseCase:
                     "nearest_emergency": "112", "action": "WAIT"
                 }
 
-        alert = await self.repo.create_alert(lat, lng, severity, message, device_id)
+        alert = await self.repo.create_alert(lat, lng, severity, message, device_id, citizen_name, citizen_phone)
         await self.repo.log_event("SOS_TRIGGERED", {"severity": severity}, lat, lng, device_id)
         
         if self.dispatch_trigger:

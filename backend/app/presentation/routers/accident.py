@@ -20,6 +20,8 @@ async def report_accident(
     severity: str = Form("moderate"),
     casualties: int = Form(0),
     description: Optional[str] = Form(None),
+    citizen_name: Optional[str] = Form(None),
+    citizen_phone: Optional[str] = Form(None),
     image: Optional[UploadFile] = File(None),
     db: AsyncSession = Depends(get_db),
 ):
@@ -36,7 +38,7 @@ async def report_accident(
     repo = AccidentRepository(db)
     use_case = AccidentUseCase(repo)
     return await use_case.submit_report(
-        background_tasks, latitude, longitude, severity, casualties, description, file_bytes, filename, content_type
+        background_tasks, latitude, longitude, severity, casualties, description, file_bytes, filename, content_type, citizen_name, citizen_phone
     )
 
 @router.get("/reports", summary="List accident reports")

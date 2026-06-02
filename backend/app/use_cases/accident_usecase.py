@@ -11,8 +11,8 @@ class AccidentUseCase:
     def __init__(self, repo: AccidentRepository):
         self.repo = repo
 
-    async def submit_report(self, background_tasks, latitude: float, longitude: float, severity: str, casualties: int, description: str, file_bytes: bytes, filename: str, content_type: str):
-        report = await self.repo.create_report(latitude, longitude, severity, casualties, description)
+    async def submit_report(self, background_tasks, latitude: float, longitude: float, severity: str, casualties: int, description: str, file_bytes: bytes, filename: str, content_type: str, citizen_name: str = None, citizen_phone: str = None):
+        report = await self.repo.create_report(latitude, longitude, severity, casualties, description, citizen_name, citizen_phone)
         
         metadata = json.dumps({"severity": severity, "casualties": casualties})
         await self.repo.log_event("ACCIDENT_REPORTED", latitude, longitude, metadata)
@@ -21,7 +21,7 @@ class AccidentUseCase:
         await self.repo.refresh(report)
 
         message = f"ACCIDENT REPORT: {severity.upper()} severity, {casualties} casualties. {description or ''}"
-        alert = await self.repo.create_sos_alert(latitude, longitude, severity, message)
+        alert = await self.repo.create_sos_alert(latitude, longitude, severity, message, citizen_name, citizen_phone)
         
         await self.repo.flush()
         await self.repo.refresh(alert)
