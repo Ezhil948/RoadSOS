@@ -1,6 +1,7 @@
 [SYSTEM DIRECTIVES FOR AI]
 CRITICAL INSTRUCTION FOR AI AGENTS: You must read this entire file before suggesting changes. At the end of every major task, file creation, or architectural change, you MUST autonomously update this MEMORY.md file to reflect the new state of the project. Do not wait for the user to ask you to update it.
 APK GENERATION RULE: NEVER autonomously build or generate new APKs unless the user explicitly requests one. CRITICAL RULE: NEVER PREEMPTIVELY MENTION THAT A NEW APK IS REQUIRED. Do not say "this will require a new APK" in your plans or responses. ONLY discuss APK requirements if the user EXPLICITLY asks you to build an APK. The user has more work to do, and mentioning APKs forces them to reply and slow down. NEVER MENTION APKS UNLESS ASKED.
+APK VERSIONING RULE: When generating new APK versions, always create a new directory named after the version (e.g., `apk/4.5/`) inside the `apk` folder and save the compiled APKs there.
 
 ## 1. Project Overview
 RoadSOS is an enterprise-grade emergency dispatch and tracking platform. It consists of four integrated applications that allow citizens to trigger SOS alerts, police officers to receive and accept dispatches in real-time, and dispatchers to monitor the entire city via a web dashboard.
@@ -67,34 +68,13 @@ RoadSOS/
 - **Real-time False Alarm Notifications**: Officer apps intercept `ALERT_CANCELLED_FALSE_ALARM` websocket events and automatically dismiss active dispatch screens with a false alarm dialog, avoiding unnecessary travel.
 - **v4.4 APKs**: Optimized ARM64 release builds for both the Citizen App (`citizen_app_4.4_arm64.apk`) and Police/Officer App (`police_app_4.4_arm64.apk`) have been generated and saved to `apk/4.4/`. The Police App APK was rebuilt after the WebSocket backgrounding fix.
 
-## 5. Planned — SOS Resolution & UX Overhaul (v4.5)
-A full detailed implementation plan has been written at `brain/e1e2b951.../implementation_plan.md`. Scope covers 4 apps. Implement in this exact order:
+### 4.5 SOS Resolution & UX Overhaul
+- **Officer App (`main_map_screen.dart`)**: Single cancel button replaced with distinct **MARK CLEAR** and **STAND DOWN** buttons, backed by new bottom sheets for selecting category/notes or reasons (False Alarm vs Cannot Respond).
+- **Citizen App (`sos_button.dart`)**: Polling handles granular states (`resolved`, `false_alarm`, `cancelled_by_police`) and presents a rich `DraggableScrollableSheet` with officer info, resolution details, and context. Reporter identity is properly passed to the API.
+- **Admin Dashboard (`IncidentModal.jsx`)**: Shows False Alarm banners, Stand Down reasons, and enriched resolution sections.
+- **Backend (`sos_usecase.py`)**: `get_alert_status()` now provides full officer/resolution metadata even after case closure.
 
-### Officer App (`officer_mobile_app/lib/features/map/main_map_screen.dart`)
-- Replace the single "CANCEL ALERT" button with TWO separate buttons:
-  - **"MARK CLEAR"** (green) → opens bottom sheet with category dropdown + officer notes → calls `/sos/alerts/{id}/close`
-  - **"STAND DOWN"** (red) → opens sheet with two sub-options:
-    - **"FALSE ALARM"** (amber, one-tap) → calls `/sos/alerts/{id}/false_alarm`
-    - **"CANNOT RESPOND"** (red, requires written reason) → calls `/sos/alerts/{id}/police-cancel`
-- Add `_showResolveSheet()` and `_showStandDownSheet()` methods. Delete old `_showCancelAlertOptions()`.
-
-### Backend (`backend/app/use_cases/sos_usecase.py`)
-- Extend `get_alert_status()` to return `closure_notes`, `category`, `citizen_name`, and officer `name` + `badge` even after the alert is resolved/cancelled. Currently these fields are missing from the polling response, so the citizen app cannot show rich post-incident info.
-
-### Citizen App (`flutter_app_v2/lib/widgets/sos_button.dart`)
-- **Fix "Unknown Reporter"**: Pass `citizenName` and `citizenPhone` from `AuthService` into `sendSOSAlert()`. Currently they are loaded from SharedPreferences but never passed to the API.
-- **Fix wrong status text**: Separate polling handlers for each backend status (`resolved`, `false_alarm`, `cancelled_by_police`, `cancelled`) so button shows correct color/label (CLEARED=green, FALSE ALARM=amber, STOOD DOWN=red) instead of always showing "CANCELLED".
-- **Replace AlertDialog popup**: Replace the small "View Reason" AlertDialog with a premium `DraggableScrollableSheet` showing officer name & badge, incident category, officer's resolution notes, and contextual emergency warnings.
-- **Add new state variables**: `_incidentResolved`, `_incidentFalseAlarm`, `_resolvedOfficerInfo`, `_closureNotes`, `_closureCategory`.
-
-### Admin Dashboard (`admin_dashboard/src/components/overlays/IncidentModal.jsx`)
-- Show officer name/badge in modal when an officer was assigned.
-- Show a prominent amber **FALSE ALARM** banner when `status === 'false_alarm'`.
-- Show stand-down reason + details when `status === 'cancelled_by_police'`.
-- Enrich the Resolution Details section with category and officer notes rendered cleanly.
-- Fix timestamp: use `alerted_at` instead of `created_at` in the modal.
-
-## 6. Work In Progress & Next Steps
-- **SOS Resolution & UX Overhaul (v4.5)**: Implement per the detailed plan above. After implementation, rebuild the Police App APK and Citizen App APK.
-- **End-to-End Testing**: Full integration test after v4.5 is implemented.
+## 5. Work In Progress & Next Steps
+- **Build v4.5 APKs**: Generate new APKs for both the Citizen App and Police App.
+- **End-to-End Testing**: Full integration test after APK deployment.
 - **Production Deployment Readiness**: Final environment variable configuration.

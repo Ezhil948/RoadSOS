@@ -11,6 +11,8 @@ import '../services/location_service.dart';
 
 import '../features/emergency/reactivation_dialog.dart';
 import 'package:hive/hive.dart';
+import 'dart:ui' show FontFeature;
+import '../services/auth_service.dart';
 
 class SOSButton extends StatefulWidget {
   const SOSButton({super.key});
@@ -32,6 +34,11 @@ class _SOSButtonState extends State<SOSButton> with SingleTickerProviderStateMix
   bool _policeCancelled = false;
   String? _policeCancelReason;
   String? _policeCancelDetails;
+  bool _incidentResolved = false;
+  bool _incidentFalseAlarm = false;
+  Map<String, dynamic>? _resolvedOfficerInfo;
+  String? _closureNotes;
+  String? _closureCategory;
   String _sosStatusText = 'SOS';
   String _sosSubText = 'Hold to activate';
 
@@ -162,11 +169,15 @@ class _SOSButtonState extends State<SOSButton> with SingleTickerProviderStateMix
       return;
     }
 
+    final auth = context.read<AuthService>();
+
     final result = await api.sendSOSAlert(
       latitude: loc.currentPosition!.latitude,
       longitude: loc.currentPosition!.longitude,
       severity: 'critical',
       message: 'Emergency SOS triggered',
+      citizenName: auth.citizenName.isNotEmpty ? auth.citizenName : null,
+      citizenPhone: auth.citizenPhone.isNotEmpty ? auth.citizenPhone : null,
     );
 
     if (!mounted) return;
@@ -237,58 +248,98 @@ class _SOSButtonState extends State<SOSButton> with SingleTickerProviderStateMix
         return;
       }
       
-      if (res['status'] == 'cancelled_by_police') {
-        setState(() {
-          _isActivated = false;
-          _activeAlertId = null;
-          _canCancel = false;
-          _policeCancelled = true;
-          _policeCancelReason = res['cancellation_reason'] ?? 'Not specified';
-          _policeCancelDetails = res['cancellation_details'];
-          _sosStatusText = 'CANCELLED';
-          _sosSubText = 'By Police';
-        });
+      // RESOLVED — officer marked it clear
+      if (res['status'] == 'resolved') {
+        final box = await Hive.openBox('settings');
+        await box.delete('last_sos_id');
         timer.cancel();
         _cancelTimer?.cancel();
         _timeoutTimer?.cancel();
-        _updateAnimationState();
-        
-        final box = await Hive.openBox('settings');
-        await box.delete('last_sos_id');
-        
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Police has cancelled your SOS.'), 
-            backgroundColor: AppTheme.primaryRed,
-            duration: Duration(seconds: 5),
-          ),
-        );
-        return;
-      } else if (res['status'] == 'resolved' || res['status'] == 'false_alarm' || res['status'] == 'cancelled' || res['status'] == 'cancelled_by_citizen') {
-        // Incident closed by officer
+        if (!mounted) return;
         setState(() {
           _isActivated = false;
           _activeAlertId = null;
           _canCancel = false;
           _policeCancelled = false;
-          _sosStatusText = 'SOS';
-          _sosSubText = 'Hold to activate';
+          _incidentResolved = true;
+          _incidentFalseAlarm = false;
+          _resolvedOfficerInfo = res['officer'];
+          _closureNotes = res['closure_notes'];
+          _closureCategory = res['category'];
+          _sosStatusText = 'CLEARED';
+          _sosSubText = 'Officer resolved your case';
         });
+        _updateAnimationState();
+        return;
+      }
+      
+      // FALSE ALARM — officer or citizen marked it as false
+      if (res['status'] == 'false_alarm') {
+        final box = await Hive.openBox('settings');
+        await box.delete('last_sos_id');
         timer.cancel();
         _cancelTimer?.cancel();
         _timeoutTimer?.cancel();
+        if (!mounted) return;
+        setState(() {
+          _isActivated = false;
+          _activeAlertId = null;
+          _canCancel = false;
+          _policeCancelled = false;
+          _incidentResolved = false;
+          _incidentFalseAlarm = true;
+          _resolvedOfficerInfo = res['officer'];
+          _sosStatusText = 'FALSE ALARM';
+          _sosSubText = 'Marked by officer';
+        });
         _updateAnimationState();
-        
+        return;
+      }
+      
+      // CANCELLED BY POLICE — officer stood down (cannot respond)
+      if (res['status'] == 'cancelled_by_police') {
         final box = await Hive.openBox('settings');
         await box.delete('last_sos_id');
-        
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Incident has been resolved by the officer.'), 
-            backgroundColor: AppTheme.accentGreen,
-            duration: Duration(seconds: 5),
-          ),
-        );
+        timer.cancel();
+        _cancelTimer?.cancel();
+        _timeoutTimer?.cancel();
+        if (!mounted) return;
+        setState(() {
+          _isActivated = false;
+          _activeAlertId = null;
+          _canCancel = false;
+          _policeCancelled = true;
+          _incidentResolved = false;
+          _incidentFalseAlarm = false;
+          _policeCancelReason = res['cancellation_reason'];
+          _policeCancelDetails = res['cancellation_details'];
+          _resolvedOfficerInfo = res['officer'];
+          _sosStatusText = 'STOOD DOWN';
+          _sosSubText = 'Officer cannot respond';
+        });
+        _updateAnimationState();
+        return;
+      }
+      
+      // CANCELLED — citizen cancelled or timed out
+      if (res['status'] == 'cancelled' || res['status'] == 'cancelled_by_citizen') {
+        final box = await Hive.openBox('settings');
+        await box.delete('last_sos_id');
+        timer.cancel();
+        _cancelTimer?.cancel();
+        _timeoutTimer?.cancel();
+        if (!mounted) return;
+        setState(() {
+          _isActivated = false;
+          _activeAlertId = null;
+          _canCancel = false;
+          _policeCancelled = false;
+          _incidentResolved = false;
+          _incidentFalseAlarm = false;
+          _sosStatusText = 'SOS';
+          _sosSubText = 'Hold to activate';
+        });
+        _updateAnimationState();
         return;
       } else if (res['status'] == 'no_officers_available') {
         setState(() {
@@ -371,6 +422,229 @@ class _SOSButtonState extends State<SOSButton> with SingleTickerProviderStateMix
     }
   }
 
+  void _showIncidentResolutionSheet() {
+    final bool isResolved = _incidentResolved;
+    final bool isFalseAlarm = _incidentFalseAlarm;
+    final bool isCancelledByPolice = _policeCancelled;
+
+    String headerTitle;
+    Color headerColor;
+    IconData headerIcon;
+
+    if (isResolved) {
+      headerTitle = 'INCIDENT CLEARED';
+      headerColor = AppTheme.accentGreen;
+      headerIcon = Icons.check_circle_rounded;
+    } else if (isFalseAlarm) {
+      headerTitle = 'FALSE ALARM';
+      headerColor = AppTheme.accentAmber;
+      headerIcon = Icons.warning_amber_rounded;
+    } else {
+      headerTitle = 'OFFICER STOOD DOWN';
+      headerColor = AppTheme.primaryRed;
+      headerIcon = Icons.block_rounded;
+    }
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => DraggableScrollableSheet(
+        initialChildSize: 0.6,
+        maxChildSize: 0.85,
+        minChildSize: 0.4,
+        builder: (_, scrollController) => Container(
+          decoration: BoxDecoration(
+            color: AppTheme.surfaceDark,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(28)),
+            border: Border.all(color: headerColor.withOpacity(0.3)),
+          ),
+          child: ListView(
+            controller: scrollController,
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+            children: [
+              // Drag handle
+              Center(child: Container(
+                margin: const EdgeInsets.only(bottom: 20, top: 8),
+                width: 40, height: 4,
+                decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2)),
+              )),
+
+              // Header
+              Row(children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: headerColor.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Icon(headerIcon, color: headerColor, size: 28),
+                ),
+                const SizedBox(width: 16),
+                Expanded(child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(headerTitle, style: TextStyle(
+                      color: headerColor, fontWeight: FontWeight.w900,
+                      fontSize: 18, letterSpacing: 1.0,
+                    )),
+                    const SizedBox(height: 4),
+                    Text('SOS Alert #$_activeAlertId', style: TextStyle(
+                      color: AppTheme.textMuted, fontSize: 12,
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                    )),
+                  ],
+                )),
+              ]),
+
+              const SizedBox(height: 24),
+              Divider(color: Colors.white.withOpacity(0.08)),
+              const SizedBox(height: 16),
+
+              // Officer Section
+              if (_resolvedOfficerInfo != null) ...[
+                _detailLabel('RESPONDING OFFICER'),
+                _detailRow(
+                  Icons.local_police_rounded,
+                  '${_resolvedOfficerInfo!['name'] ?? 'Officer'} • Badge ${_resolvedOfficerInfo!['badge'] ?? 'N/A'}',
+                  AppTheme.accentBlue,
+                ),
+                const SizedBox(height: 16),
+              ],
+
+              // Resolution details (for resolved)
+              if (isResolved) ...[
+                if (_closureCategory != null) ...[
+                  _detailLabel('INCIDENT CATEGORY'),
+                  _detailRow(Icons.category_rounded, _closureCategory!.toUpperCase(), AppTheme.accentGreen),
+                  const SizedBox(height: 16),
+                ],
+                if (_closureNotes != null && _closureNotes!.isNotEmpty) ...[
+                  _detailLabel('OFFICER\'S NOTES'),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: AppTheme.surfaceElevated,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.white.withOpacity(0.06)),
+                    ),
+                    child: Text(_closureNotes!, style: const TextStyle(
+                      color: AppTheme.textSecondary, fontSize: 14, height: 1.5,
+                    )),
+                  ),
+                  const SizedBox(height: 16),
+                ],
+              ],
+
+              // False alarm info
+              if (isFalseAlarm) ...[
+                _detailLabel('NOTE'),
+                _detailRow(Icons.info_outline_rounded,
+                  'This alert was marked as a false alarm. No penalty has been applied if you cancelled within the grace period.',
+                  AppTheme.accentAmber),
+                const SizedBox(height: 16),
+              ],
+
+              // Stood down reason
+              if (isCancelledByPolice) ...[
+                _detailLabel('REASON'),
+                _detailRow(Icons.block_rounded,
+                  _policeCancelReason ?? 'Not specified', AppTheme.primaryRed),
+                if (_policeCancelDetails != null && _policeCancelDetails!.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  _detailLabel('OFFICER\'S DETAILS'),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: AppTheme.surfaceElevated,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(_policeCancelDetails!, style: const TextStyle(
+                      color: AppTheme.textSecondary, fontSize: 14, height: 1.5,
+                    )),
+                  ),
+                ],
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: AppTheme.accentAmber.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppTheme.accentAmber.withOpacity(0.2)),
+                  ),
+                  child: const Row(children: [
+                    Icon(Icons.phone_rounded, color: AppTheme.accentAmber, size: 18),
+                    SizedBox(width: 10),
+                    Expanded(child: Text(
+                      'Another officer may still respond. If in danger, call 112 immediately.',
+                      style: TextStyle(color: AppTheme.accentAmber, fontSize: 13),
+                    )),
+                  ]),
+                ),
+                const SizedBox(height: 16),
+              ],
+
+              // Dismiss button
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(ctx);
+                    setState(() {
+                      _incidentResolved = false;
+                      _incidentFalseAlarm = false;
+                      _policeCancelled = false;
+                      _sosStatusText = 'SOS';
+                      _sosSubText = 'Hold to activate';
+                    });
+                    _updateAnimationState();
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: headerColor,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  ),
+                  child: const Text('UNDERSTOOD', style: TextStyle(
+                    color: Colors.white, fontWeight: FontWeight.w800, fontSize: 15, letterSpacing: 0.5,
+                  )),
+                ),
+              ),
+              const SizedBox(height: 24),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // Helper widgets
+  Widget _detailLabel(String text) => Padding(
+    padding: const EdgeInsets.only(bottom: 8),
+    child: Text(text, style: const TextStyle(
+      color: AppTheme.textMuted, fontSize: 11, fontWeight: FontWeight.w700, letterSpacing: 1.5,
+    )),
+  );
+
+  Widget _detailRow(IconData icon, String text, Color color) => Row(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Icon(icon, color: color, size: 18),
+      const SizedBox(width: 10),
+      Expanded(child: Text(text, style: TextStyle(color: color, fontSize: 14, fontWeight: FontWeight.w600))),
+    ],
+  );
+
+  Color get _buttonColor {
+    if (_sosStatusText == 'CLEARED') return AppTheme.accentGreen;
+    if (_sosStatusText == 'FALSE ALARM') return AppTheme.accentAmber;
+    if (_sosStatusText == 'STOOD DOWN') return AppTheme.accentAmber;
+    if (_sosStatusText == 'NO OFFICERS') return AppTheme.accentAmber;
+    if (_sosStatusText == 'HERE') return AppTheme.accentGreen;
+    return AppTheme.primaryRed;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Column(
@@ -408,7 +682,7 @@ class _SOSButtonState extends State<SOSButton> with SingleTickerProviderStateMix
                 final scale1 = 1.0 + (_pulseController.value * 0.15);
                 final scale2 = 1.0 + (_pulseController.value * 0.30);
                 
-                final baseColor = _sosStatusText == 'HERE' ? AppTheme.accentGreen : AppTheme.primaryRed;
+                final baseColor = _buttonColor;
 
                 return Stack(
                   alignment: Alignment.center,
@@ -425,9 +699,9 @@ class _SOSButtonState extends State<SOSButton> with SingleTickerProviderStateMix
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           gradient: LinearGradient(
-                            colors: _sosStatusText == 'HERE'
-                                    ? [AppTheme.accentGreen, const Color(0xFF28A745)]
-                                    : [AppTheme.primaryRed, const Color(0xFFC0392B)],
+                            colors: [_buttonColor, _buttonColor.withOpacity(0.75)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
                           ),
                         ),
                         child: Center(
@@ -472,42 +746,26 @@ class _SOSButtonState extends State<SOSButton> with SingleTickerProviderStateMix
               label: const Text('Cancel SOS', style: TextStyle(color: AppTheme.primaryRed, fontWeight: FontWeight.bold, fontSize: 16)),
             ),
           ),
-        if (_policeCancelled)
+        if (_incidentResolved || _incidentFalseAlarm || _policeCancelled)
           Padding(
             padding: const EdgeInsets.only(top: 16.0),
             child: TextButton.icon(
-              onPressed: () {
-                showDialog(
-                  context: context,
-                  builder: (ctx) => AlertDialog(
-                    title: const Text('Cancellation Details', style: TextStyle(fontWeight: FontWeight.bold)),
-                    content: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Reason: ${_policeCancelReason ?? "N/A"}', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                        const SizedBox(height: 8),
-                        Text(_policeCancelDetails ?? 'No extra details provided.'),
-                      ],
-                    ),
-                    actions: [
-                      TextButton(
-                        onPressed: () {
-                          setState(() {
-                            _policeCancelled = false;
-                            _sosStatusText = 'SOS';
-                            _sosSubText = 'Hold to activate';
-                          });
-                          Navigator.pop(ctx);
-                        },
-                        child: const Text('Dismiss', style: TextStyle(color: AppTheme.primaryRed)),
-                      )
-                    ],
-                  ),
-                );
-              },
-              icon: const Icon(Icons.keyboard_arrow_down, color: AppTheme.primaryRed),
-              label: const Text('View Reason', style: TextStyle(color: AppTheme.primaryRed, fontWeight: FontWeight.bold, fontSize: 16)),
+              onPressed: _showIncidentResolutionSheet,
+              icon: Icon(
+                _incidentResolved ? Icons.check_circle_rounded : 
+                _incidentFalseAlarm ? Icons.warning_amber_rounded : Icons.block_rounded,
+                color: _incidentResolved ? AppTheme.accentGreen : 
+                       _incidentFalseAlarm ? AppTheme.accentAmber : AppTheme.primaryRed,
+              ),
+              label: Text(
+                _incidentResolved ? 'View Resolution Details' : 
+                _incidentFalseAlarm ? 'View False Alarm Info' : 'View Reason',
+                style: TextStyle(
+                  color: _incidentResolved ? AppTheme.accentGreen :
+                         _incidentFalseAlarm ? AppTheme.accentAmber : AppTheme.primaryRed,
+                  fontWeight: FontWeight.bold, fontSize: 16,
+                ),
+              ),
             ),
           ),
         if (!_isActivated && _sosStatusText == 'NO OFFICERS')

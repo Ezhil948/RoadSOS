@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { MapPin, CheckCircle, User, X, Clock } from 'lucide-react';
+import { MapPin, CheckCircle, User, X, Clock, AlertTriangle } from 'lucide-react';
 import { StatusBadge } from '../widgets/StatusBadge';
 import { api } from '../../api';
 
@@ -57,7 +57,13 @@ export const IncidentModal = ({ incident, type, onClose, onStatusChange }) => {
   };
 
   const name = incident?.citizen_name ?? incident?.reporter_name ?? incident?.name ?? incident?.user?.name ?? incident?.phone_number ?? 'Unknown Reporter';
-  const timestamp = incident?.created_at ?? incident?.timestamp;
+  const timestamp = incident?.alerted_at ?? incident?.created_at ?? incident?.timestamp;
+
+  const labelStyle = {
+    fontFamily: 'Syne, sans-serif', fontSize: '13px', fontWeight: 700,
+    letterSpacing: '0.08em', color: 'var(--text-secondary)',
+    textTransform: 'uppercase', marginBottom: '8px'
+  };
 
   return (
     <div style={{
@@ -128,9 +134,27 @@ export const IncidentModal = ({ incident, type, onClose, onStatusChange }) => {
         {/* Body */}
         <div style={{ padding: 'var(--space-6)', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 'var(--space-5)' }}>
           
+          {isSOS && incident.status === 'false_alarm' && (
+            <div style={{
+              background: 'rgba(255, 159, 10, 0.1)',
+              border: '1px solid rgba(255, 159, 10, 0.3)',
+              borderRadius: 'var(--radius-sm)',
+              padding: 'var(--space-3) var(--space-4)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '10px',
+              margin: '0 0 var(--space-4)',
+            }}>
+              <AlertTriangle size={16} color="var(--amber-vivid)" />
+              <span style={{ color: 'var(--amber-vivid)', fontSize: '13px', fontWeight: 600 }}>
+                This alert was reported as a FALSE ALARM
+              </span>
+            </div>
+          )}
+
           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
             <div>
-              <div style={{ fontFamily: 'Syne, sans-serif', fontSize: '13px', fontWeight: 700, letterSpacing: '0.08em', color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '8px' }}>Status</div>
+              <div style={labelStyle}>Status</div>
               <div style={{ display: 'flex', gap: '8px' }}>
                 <StatusBadge status={incident.status} />
                 {incident.severity && <StatusBadge status={incident.severity} />}
@@ -139,21 +163,21 @@ export const IncidentModal = ({ incident, type, onClose, onStatusChange }) => {
           </div>
 
           <div>
-            <div style={{ fontFamily: 'Syne, sans-serif', fontSize: '13px', fontWeight: 700, letterSpacing: '0.08em', color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '8px' }}>Reporter</div>
+            <div style={labelStyle}>Reporter</div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-primary)', fontFamily: 'DM Sans, sans-serif', fontSize: '15px' }}>
               <User size={16} color="var(--text-secondary)" /> {name}
             </div>
           </div>
 
           <div>
-            <div style={{ fontFamily: 'Syne, sans-serif', fontSize: '13px', fontWeight: 700, letterSpacing: '0.08em', color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '8px' }}>Location</div>
+            <div style={labelStyle}>Location</div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-primary)', fontFamily: 'DM Sans, sans-serif', fontSize: '15px' }}>
               <MapPin size={16} color="var(--text-secondary)" /> {incident.lat ?? incident.latitude}, {incident.lng ?? incident.longitude}
             </div>
           </div>
 
           <div>
-            <div style={{ fontFamily: 'Syne, sans-serif', fontSize: '13px', fontWeight: 700, letterSpacing: '0.08em', color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '8px' }}>Time</div>
+            <div style={labelStyle}>Time</div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-primary)', fontFamily: 'DM Sans, sans-serif', fontSize: '15px' }}>
               <Clock size={16} color="var(--text-secondary)" /> {timeAgo(timestamp)}
             </div>
@@ -161,26 +185,65 @@ export const IncidentModal = ({ incident, type, onClose, onStatusChange }) => {
 
           {isSOS && incident.message && (
              <div>
-               <div style={{ fontFamily: 'Syne, sans-serif', fontSize: '13px', fontWeight: 700, letterSpacing: '0.08em', color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '8px' }}>User Message</div>
+               <div style={labelStyle}>User Message</div>
                <div style={{ background: 'var(--bg-surface-2)', padding: 'var(--space-4)', borderRadius: 'var(--radius-sm)', fontFamily: 'DM Sans, sans-serif', fontSize: '13px', color: 'var(--text-primary)' }}>
                  {incident.message}
                </div>
              </div>
           )}
 
+          {isSOS && incident.status === 'cancelled_by_police' && (
+            <div>
+              <div style={labelStyle}>Stand Down Details</div>
+              <div style={{
+                background: 'rgba(255, 59, 48, 0.07)',
+                border: '1px solid rgba(255, 59, 48, 0.2)',
+                borderRadius: 'var(--radius-sm)',
+                padding: 'var(--space-4)',
+              }}>
+                <div style={{ color: 'var(--red-vivid)', fontSize: '13px', fontWeight: 600, marginBottom: '6px' }}>
+                  Reason: {incident.cancellation_reason || 'Not specified'}
+                </div>
+                {incident.cancellation_details && (
+                  <div style={{ color: 'var(--text-secondary)', fontSize: '13px', lineHeight: '1.5' }}>
+                    {incident.cancellation_details}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {isSOS && incident.status === 'resolved' && (
              <>
                <div>
-                 <div style={{ fontFamily: 'Syne, sans-serif', fontSize: '13px', fontWeight: 700, letterSpacing: '0.08em', color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '8px', marginTop: '16px' }}>Resolution Details</div>
-                 <div style={{ background: 'var(--bg-surface-2)', padding: 'var(--space-4)', borderRadius: 'var(--radius-sm)', fontFamily: 'DM Sans, sans-serif', fontSize: '13px', color: 'var(--text-primary)' }}>
-                   <div style={{ marginBottom: '4px' }}><strong style={{ color: 'var(--text-secondary)' }}>Category:</strong> {incident.category || 'N/A'}</div>
-                   <div><strong style={{ color: 'var(--text-secondary)' }}>Notes:</strong> {incident.closure_notes || 'None provided'}</div>
+                 <div style={labelStyle}>Resolution Details</div>
+                 <div style={{ background: 'var(--bg-surface-2)', padding: 'var(--space-4)', borderRadius: 'var(--radius-sm)' }}>
+                   {incident.accepted_officer_id && (
+                     <div style={{ marginBottom: '8px' }}>
+                       <span style={{ color: 'var(--text-secondary)', fontSize: '12px', fontWeight: 600 }}>OFFICER ID</span>
+                       <div style={{ color: 'var(--text-primary)', fontSize: '14px', marginTop: '4px' }}>
+                         #{incident.accepted_officer_id}
+                       </div>
+                     </div>
+                   )}
+                   <div style={{ marginBottom: '8px' }}>
+                     <span style={{ color: 'var(--text-secondary)', fontSize: '12px', fontWeight: 600 }}>CATEGORY</span>
+                     <div style={{ color: 'var(--text-primary)', fontSize: '14px', marginTop: '4px' }}>
+                       {incident.category || 'Not categorized'}
+                     </div>
+                   </div>
+                   <div>
+                     <span style={{ color: 'var(--text-secondary)', fontSize: '12px', fontWeight: 600 }}>OFFICER NOTES</span>
+                     <div style={{ color: 'var(--text-primary)', fontSize: '14px', marginTop: '4px', lineHeight: '1.6' }}>
+                       {incident.closure_notes || 'No notes provided'}
+                     </div>
+                   </div>
                  </div>
                </div>
                
                {incident.closure_photo_urls && incident.closure_photo_urls.length > 0 && (
                  <div>
-                   <div style={{ fontFamily: 'Syne, sans-serif', fontSize: '13px', fontWeight: 700, letterSpacing: '0.08em', color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '8px', marginTop: '16px' }}>Resolution Photos</div>
+                   <div style={labelStyle}>Resolution Photos</div>
                    <div style={{ display: 'flex', gap: '8px', overflowX: 'auto' }}>
                      {incident.closure_photo_urls.map((url, i) => (
                        <img key={i} src={`${API_BASE_URL}/${url}`} alt="Resolution" style={{ height: '120px', borderRadius: 'var(--radius-sm)' }} />

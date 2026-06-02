@@ -81,7 +81,10 @@ class SOSUseCase:
             "status": alert.status, "is_dispatched": False, "officer": None,
             "cancellation_reason": alert.cancellation_reason,
             "cancellation_details": alert.cancellation_details,
-            "cancelled_by": alert.cancelled_by
+            "cancelled_by": alert.cancelled_by,
+            "closure_notes": alert.closure_notes,
+            "category": alert.category,
+            "citizen_name": alert.citizen_name,
         }
         
         if alert.status == "active":
@@ -92,6 +95,7 @@ class SOSUseCase:
                     dist = haversine_km(officer.latitude, officer.longitude, alert.latitude, alert.longitude)
                     response["officer"] = {
                         "id": officer.id, "badge": officer.badge_number,
+                        "name": officer.name,
                         "distance_km": round(dist, 2), "eta_mins": int(dist * 2)
                     }
             elif not alert.pinged_officer_ids or len(alert.pinged_officer_ids) == 0:
@@ -106,6 +110,17 @@ class SOSUseCase:
                         response.update({"status": "cancelled", "cancellation_reason": "timeout", "cancelled_by": "citizen"})
                     elif int(delta) % 10 < 5 and self.dispatch_trigger:
                         await self.dispatch_trigger(alert.id, self.repo.session)
+        
+        # If resolved/cancelled, also return the assigned officer's details
+        elif alert.status in ("resolved", "false_alarm", "cancelled_by_police") and alert.accepted_officer_id:
+            officer = await self.repo.get_officer(alert.accepted_officer_id)
+            if officer:
+                response["officer"] = {
+                    "id": officer.id,
+                    "badge": officer.badge_number,
+                    "name": officer.name,
+                }
+        
         return response
 
     async def resolve_alert(self, alert_id: int, notes: str):

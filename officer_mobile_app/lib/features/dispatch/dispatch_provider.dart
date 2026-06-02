@@ -161,7 +161,9 @@ class DispatchPollingNotifier extends StateNotifier<OfficerStatus> {
         }
       }
       
-
+      // 3. Fallback: Always poll for dispatches in case WebSocket drops
+      await _fetchDispatch();
+      
       _failCount = 0;
     } catch (e) {
       _failCount++;

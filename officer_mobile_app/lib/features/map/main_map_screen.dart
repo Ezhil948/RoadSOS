@@ -137,75 +137,192 @@ class _MainMapScreenState extends ConsumerState<MainMapScreen> with SingleTicker
     );
   }
 
-  void _showCancelAlertOptions(int alertId) {
-    String? selectedReason;
-    final TextEditingController detailsController = TextEditingController();
+  void _showResolveSheet(int alertId) {
+    String? selectedCategory;
+    final notesController = TextEditingController();
 
-    showDialog(
+    showModalBottomSheet(
       context: context,
-      builder: (ctx) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return AlertDialog(
-              backgroundColor: Theme.of(context).brightness == Brightness.dark ? kDarkSurface : kLightSurface,
-              title: const Text('Cancel Alert', style: TextStyle(color: kAccentRed, fontWeight: FontWeight.bold)),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Select reason for cancellation:'),
-                  const SizedBox(height: 8),
-                  DropdownButtonFormField<String>(
-                    decoration: const InputDecoration(border: OutlineInputBorder()),
-                    items: const [
-                      DropdownMenuItem(value: 'false_alarm', child: Text('False Alarm')),
-                      DropdownMenuItem(value: 'resolved_on_scene', child: Text('Resolved on scene')),
-                      DropdownMenuItem(value: 'duplicate_alert', child: Text('Duplicate alert')),
-                      DropdownMenuItem(value: 'other', child: Text('Other')),
-                    ],
-                    onChanged: (val) {
-                      setState(() {
-                        selectedReason = val;
-                      });
-                    },
-                    value: selectedReason,
-                    hint: const Text('Reason'),
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setModalState) => Padding(
+          padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+          child: Container(
+            decoration: const BoxDecoration(
+              color: Color(0xFF12121A),
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(child: Container(width: 40, height: 4,
+                  decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2)))),
+                const SizedBox(height: 20),
+                const Text('MARK INCIDENT CLEAR', style: TextStyle(
+                  color: Color(0xFF30D158), fontWeight: FontWeight.bold,
+                  fontSize: 16, letterSpacing: 1.2,
+                )),
+                const SizedBox(height: 20),
+                DropdownButtonFormField<String>(
+                  decoration: InputDecoration(
+                    labelText: 'Incident Category',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                   ),
-                  if (selectedReason == 'other') ...[
-                    const SizedBox(height: 16),
-                    TextField(
-                      controller: detailsController,
-                      decoration: const InputDecoration(
-                        border: OutlineInputBorder(),
-                        hintText: 'Enter details (required)',
-                      ),
-                      onChanged: (v) => setState(() {}),
-                      maxLines: 2,
-                    ),
+                  items: const [
+                    DropdownMenuItem(value: 'accident', child: Text('Road Accident')),
+                    DropdownMenuItem(value: 'medical', child: Text('Medical Emergency')),
+                    DropdownMenuItem(value: 'crime', child: Text('Criminal Activity')),
+                    DropdownMenuItem(value: 'traffic', child: Text('Traffic Incident')),
+                    DropdownMenuItem(value: 'other', child: Text('Other')),
                   ],
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(ctx),
-                  child: const Text('BACK'),
+                  onChanged: (val) => setModalState(() => selectedCategory = val),
+                  value: selectedCategory,
+                  hint: const Text('Select category'),
                 ),
-                ElevatedButton(
-                  onPressed: (selectedReason != null && (selectedReason != 'other' || detailsController.text.isNotEmpty))
-                      ? () {
-                          Navigator.pop(ctx);
-                          final reason = selectedReason == 'other' ? detailsController.text : selectedReason!;
-                          ref.read(dispatchProvider.notifier).cancelDispatchByPolice(reason, detailsController.text);
-                        }
-                      : null,
-                  style: ElevatedButton.styleFrom(backgroundColor: kAccentRed),
-                  child: const Text('CONFIRM CANCEL', style: TextStyle(color: Colors.white)),
+                const SizedBox(height: 16),
+                TextField(
+                  controller: notesController,
+                  maxLines: 3,
+                  decoration: InputDecoration(
+                    labelText: 'Resolution Notes',
+                    hintText: 'Describe how the incident was resolved...',
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    onPressed: selectedCategory == null ? null : () {
+                      Navigator.pop(ctx);
+                      ref.read(dispatchProvider.notifier).resolveDispatch(
+                        false,
+                        notesController.text,
+                        null,
+                        selectedCategory,
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF30D158),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: const Text('CONFIRM — MARK CLEAR',
+                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15)),
+                  ),
                 ),
               ],
-            );
-          }
-        );
-      },
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showStandDownSheet(int alertId) {
+    final reasonController = TextEditingController();
+    bool showReasonField = false;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => StatefulBuilder(
+        builder: (context, setModalState) => Padding(
+          padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+          child: Container(
+            decoration: const BoxDecoration(
+              color: Color(0xFF12121A),
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(child: Container(width: 40, height: 4,
+                  decoration: BoxDecoration(color: Colors.white24, borderRadius: BorderRadius.circular(2)))),
+                const SizedBox(height: 20),
+                const Text('STAND DOWN — SELECT REASON', style: TextStyle(
+                  color: Color(0xFFFF3B30), fontWeight: FontWeight.bold,
+                  fontSize: 16, letterSpacing: 1.2,
+                )),
+                const SizedBox(height: 20),
+                // Option 1: False Alarm
+                Container(
+                  width: double.infinity,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFF9F0A).withOpacity(0.1),
+                    border: Border.all(color: const Color(0xFFFF9F0A).withOpacity(0.4)),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: ListTile(
+                    leading: const Icon(Icons.warning_amber_rounded, color: Color(0xFFFF9F0A)),
+                    title: const Text('FALSE ALARM', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFFFF9F0A))),
+                    subtitle: const Text('The emergency did not exist or was mistaken', style: TextStyle(fontSize: 12)),
+                    onTap: () {
+                      Navigator.pop(ctx);
+                      ref.read(dispatchProvider.notifier).resolveDispatch(true, 'false_alarm');
+                    },
+                  ),
+                ),
+                const SizedBox(height: 12),
+                // Option 2: Cannot Pursue
+                if (!showReasonField)
+                  Container(
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFF3B30).withOpacity(0.1),
+                      border: Border.all(color: const Color(0xFFFF3B30).withOpacity(0.4)),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: ListTile(
+                      leading: const Icon(Icons.block, color: Color(0xFFFF3B30)),
+                      title: const Text('CANNOT RESPOND', style: TextStyle(fontWeight: FontWeight.bold, color: Color(0xFFFF3B30))),
+                      subtitle: const Text('Circumstances prevent me from attending this incident', style: TextStyle(fontSize: 12)),
+                      onTap: () => setModalState(() => showReasonField = true),
+                    ),
+                  ),
+                if (showReasonField) ...[
+                  TextField(
+                    controller: reasonController,
+                    maxLines: 3,
+                    autofocus: true,
+                    onChanged: (_) => setModalState(() {}),
+                    decoration: InputDecoration(
+                      labelText: 'Reason for standing down',
+                      hintText: 'e.g. Higher priority incident, road blocked...',
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: reasonController.text.trim().isEmpty ? null : () {
+                        Navigator.pop(ctx);
+                        ref.read(dispatchProvider.notifier).cancelDispatchByPolice(
+                          'cannot_respond', reasonController.text.trim());
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFFF3B30),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      child: const Text('CONFIRM STAND DOWN',
+                        style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 8),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -451,18 +568,34 @@ class _MainMapScreenState extends ConsumerState<MainMapScreen> with SingleTicker
               
               const SizedBox(height: 16),
               
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: () => _showCancelAlertOptions(dispatch.alertId),
-                  icon: const Icon(Icons.cancel, color: Colors.white),
-                  label: const Text('CANCEL ALERT', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: kAccentRed, 
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () => _showResolveSheet(dispatch!.alertId),
+                      icon: const Icon(Icons.check_circle_outline, color: Colors.white),
+                      label: const Text('MARK CLEAR', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF30D158),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
                   ),
-                )
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () => _showStandDownSheet(dispatch!.alertId),
+                      icon: const Icon(Icons.block, color: Colors.white),
+                      label: const Text('STAND DOWN', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFFF3B30),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
