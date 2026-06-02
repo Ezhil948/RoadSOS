@@ -141,14 +141,18 @@ class DispatchPollingNotifier extends StateNotifier<OfficerStatus> {
         },
       );
 
-      // 2. Poll backup status if active (Keep this in the loop for now, or this could also be WS)
+      // 2. Poll backup status if active
       if (state is Navigating) {
-        if ((state as Navigating).backupAlertId != null) {
-          final bRes = await dio.get(ApiEndpoints.getAlertStatus((state as Navigating).backupAlertId!));
+        final navState = state as Navigating;
+        if (navState.backupAlertId != null) {
+          final bRes = await dio.get(ApiEndpoints.getAlertStatus(navState.backupAlertId!));
           if (bRes.data['status'] == 'cancelled_by_police') {
-             state = Navigating((state as Navigating).dispatch, backupAlertId: null);
-             HapticFeedback.vibrate();
-             print("Your backup request was cancelled by another officer.");
+             // CRITICAL: Check if we are still Navigating before blindly overwriting state
+             if (state is Navigating) {
+               state = Navigating((state as Navigating).dispatch, backupAlertId: null);
+               HapticFeedback.vibrate();
+               print("Your backup request was cancelled by another officer.");
+             }
           }
         }
       }

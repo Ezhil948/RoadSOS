@@ -128,6 +128,8 @@ class _SOSButtonState extends State<SOSButton> with SingleTickerProviderStateMix
   }
 
   Future<void> _triggerSOS() async {
+    if (_isActivated) return; // Prevent duplicate SOS triggers
+    
     HapticFeedback.heavyImpact();
     final loc = context.read<LocationService>();
     final api = context.read<ApiService>();

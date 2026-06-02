@@ -22,8 +22,6 @@ async def ping_location(
     result = await usecase.ping_location(officer_id, payload.latitude, payload.longitude, payload.status)
     if "error" in result:
         raise HTTPException(status_code=result["status_code"], detail=result["error"])
-    
-    await usecase.repo.commit()
     return result
 
 @router.get("/officers/{officer_id}/dispatch", summary="Poll for incoming dispatch (Uber screen)")
@@ -41,8 +39,6 @@ async def respond_to_dispatch(
     result = await usecase.respond_to_dispatch(officer_id, alert_id, payload.action)
     if "error" in result:
         raise HTTPException(status_code=result["status_code"], detail=result["error"])
-    
-    await usecase.repo.commit()
     return result
 
 @router.post("/trigger/{alert_id}", summary="System endpoint to find nearest officer")
@@ -51,8 +47,6 @@ async def trigger_dispatch(alert_id: int, usecase: DispatchUseCase = Depends(get
     result = await usecase.find_and_assign_officers(alert_id)
     if "error" in result:
         raise HTTPException(status_code=400, detail=result.get("message", "Error finding officers"))
-    
-    await usecase.repo.commit()
     return result
 
 # Expose internal helper for sos.py backward compatibility (since sos.py isn't fully refactored yet)
@@ -72,8 +66,6 @@ async def request_backup(
     result = await usecase.request_backup(officer_id, payload.latitude, payload.longitude, payload.message)
     if "error" in result:
         raise HTTPException(status_code=result["status_code"], detail=result["error"])
-    
-    await usecase.repo.commit()
     return result
 
 @router.websocket("/ws/officer/{officer_id}")

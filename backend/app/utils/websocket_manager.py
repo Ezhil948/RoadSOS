@@ -22,11 +22,15 @@ class ConnectionManager:
 
     async def send_personal_message(self, message: dict, officer_id: int):
         if officer_id in self.active_connections:
+            dead_connections = []
             for connection in self.active_connections[officer_id]:
                 try:
                     await connection.send_text(json.dumps(message))
                 except Exception as e:
                     print(f"Error sending ws message to {officer_id}: {e}")
-                    self.disconnect(officer_id, connection)
+                    dead_connections.append(connection)
+            
+            for dead_conn in dead_connections:
+                self.disconnect(officer_id, dead_conn)
 
 manager = ConnectionManager()

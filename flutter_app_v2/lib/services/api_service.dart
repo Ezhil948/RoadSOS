@@ -144,8 +144,7 @@ class ApiService extends ChangeNotifier {
     try {
       final box = await Hive.openBox('settings');
       String deviceId = box.get('device_id', defaultValue: '');
-      
-      final response = await _dio.post('${ApiConstants.baseUrl}/sos/alerts/$alertId/location-update', data: {
+      final response = await _dio.post('/api/v1/sos/alerts/$alertId/location-update', data: {
         'new_lat': lat,
         'new_lng': lng,
         'device_id': deviceId,
@@ -158,7 +157,7 @@ class ApiService extends ChangeNotifier {
 
   Future<Map<String, dynamic>> getAlertStatus(int alertId) async {
     try {
-      final response = await _dio.get('${ApiConstants.baseUrl}/api/v1/sos/alerts/$alertId/status');
+      final response = await _dio.get('/api/v1/sos/alerts/$alertId/status');
       return response.data;
     } catch (e) {
       return _handleError(e);
