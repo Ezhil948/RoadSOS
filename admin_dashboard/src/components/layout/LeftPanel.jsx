@@ -64,8 +64,8 @@ export function LeftPanel() {
       <SectionLabel text="UNITS ON DUTY" />
       <GlassCard style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: 'var(--space-5) var(--space-4)' }}>
         {/* TODO: Connect to /officers/active endpoint */}
-        <div style={{ fontFamily: 'Syne, sans-serif', fontSize: '32px', fontWeight: 400, color: 'var(--text-primary)', lineHeight: 1 }}>
-          -
+        <div style={{ fontFamily: 'Syne, sans-serif', fontSize: '32px', fontWeight: 300, color: 'var(--text-primary)', lineHeight: 1 }}>
+          —
         </div>
         <div style={{ fontFamily: 'DM Sans, sans-serif', fontSize: '11px', color: 'var(--text-secondary)', marginTop: '8px' }}>
           Officers Active
