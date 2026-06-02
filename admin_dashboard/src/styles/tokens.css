@@ -1,0 +1,95 @@
+:root {
+
+  /* ── BASE SURFACES ──────────────────────────────────── */
+  --bg-void:          #070A10;   /* Absolute darkest base. Body background. */
+  --bg-base:          #0B0F1A;   /* Primary app background. Main canvas. */
+  --bg-surface-1:     #101622;   /* Cards, panels sitting on bg-base. */
+  --bg-surface-2:     #161D2E;   /* Elevated hover state, nested cards. */
+  --bg-glass:         rgba(16, 22, 34, 0.60); /* Glassmorphic fill. */
+  --bg-glass-hover:   rgba(22, 29, 46, 0.75); /* Glass on hover. */
+
+  /* ── BORDERS ────────────────────────────────────────── */
+  --border-subtle:    rgba(255, 255, 255, 0.05);  /* Lowest division lines. */
+  --border-default:   rgba(255, 255, 255, 0.09);  /* Card borders, dividers. */
+  --border-strong:    rgba(255, 255, 255, 0.16);  /* Focused/hovered borders. */
+
+  /* ── CRITICAL (ACTIVE SOS) ──────────────────────────── */
+  --red-vivid:        #FF2D55;   /* Primary SOS accent. Text, icons. */
+  --red-dim:          #C41F3E;   /* Darker red for gradients. */
+  --red-glow-near:    rgba(255, 45, 85, 0.35);   /* Inner glow on SOS card. */
+  --red-glow-far:     rgba(255, 45, 85, 0.10);   /* Outer spread glow. */
+  --red-fill:         rgba(255, 45, 85, 0.08);   /* Subtle card tint. */
+  --red-fill-hover:   rgba(255, 45, 85, 0.15);   /* Card hover tint. */
+  --red-border:       rgba(255, 45, 85, 0.30);   /* Card border. */
+
+  /* ── CAUTION (ACTIVE REPORTS) ───────────────────────── */
+  --amber-vivid:      #FF9F0A;   /* Primary Accident Report accent. */
+  --amber-dim:        #CC7A00;   /* Darker amber for depth. */
+  --amber-glow-near:  rgba(255, 159, 10, 0.30);
+  --amber-fill:       rgba(255, 159, 10, 0.07);
+  --amber-fill-hover: rgba(255, 159, 10, 0.13);
+  --amber-border:     rgba(255, 159, 10, 0.28);
+
+  /* ── RESOLVED (PAST/ARCHIVE) ────────────────────────── */
+  --green-vivid:      #30D158;   /* Resolved state. Badges. */
+  --green-fill:       rgba(48, 209, 88, 0.08);
+  --green-border:     rgba(48, 209, 88, 0.25);
+
+  /* ── INFORMATION (DISPATCHED / OFFICER ASSIGNED) ────── */
+  --blue-vivid:       #0A84FF;
+  --blue-fill:        rgba(10, 132, 255, 0.08);
+  --blue-border:      rgba(10, 132, 255, 0.25);
+
+  /* ── TYPOGRAPHY ─────────────────────────────────────── */
+  --text-primary:     #F0F2F5;   /* Headlines, important values. */
+  --text-secondary:   #8A90A0;   /* Labels, metadata, secondary info. */
+  --text-tertiary:    #4A5060;   /* Disabled states, divider labels. */
+  --text-on-red:      #FF2D55;
+  --text-on-amber:    #FF9F0A;
+  --text-on-green:    #30D158;
+  --text-on-blue:     #0A84FF;
+
+  /* ── SHADOWS ────────────────────────────────────────── */
+  --shadow-sm:        0 1px 4px rgba(0, 0, 0, 0.50);
+  --shadow-md:        0 4px 16px rgba(0, 0, 0, 0.55),
+                      0 1px 4px  rgba(0, 0, 0, 0.40);
+  --shadow-lg:        0 8px 32px rgba(0, 0, 0, 0.65),
+                      0 2px 8px  rgba(0, 0, 0, 0.45);
+  --shadow-red-card:  0 0 24px var(--red-glow-near),
+                      0 0 60px var(--red-glow-far),
+                      0 4px 16px rgba(0, 0, 0, 0.55);
+  --shadow-amber-card:0 0 20px var(--amber-glow-near),
+                      0 4px 16px rgba(0, 0, 0, 0.55);
+
+  /* ── GLASSMORPHISM ──────────────────────────────────── */
+  --glass-blur:       blur(24px) saturate(160%);
+  --glass-border:     1px solid var(--border-default);
+
+  /* ── BORDER RADIUS ──────────────────────────────────── */
+  --radius-xs:        6px;
+  --radius-sm:        10px;
+  --radius-md:        14px;
+  --radius-lg:        20px;
+  --radius-pill:      999px;
+
+  /* ── SPACING SCALE ──────────────────────────────────── */
+  --space-1:  4px;
+  --space-2:  8px;
+  --space-3:  12px;
+  --space-4:  16px;
+  --space-5:  20px;
+  --space-6:  24px;
+  --space-8:  32px;
+  --space-10: 40px;
+  --space-12: 48px;
+
+  /* ── TRANSITIONS ────────────────────────────────────── */
+  --ease-out-cubic: cubic-bezier(0.33, 1, 0.68, 1);
+  --transition-fast:   120ms var(--ease-out-cubic);
+  --transition-normal: 220ms var(--ease-out-cubic);
+
+  /* ── SIDEBAR / LAYOUT DIMENSIONS ───────────────────── */
+  --topbar-height:    60px;
+  --left-panel-width: 220px;
+  --right-feed-width: 300px;
+}

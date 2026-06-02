@@ -61,19 +61,26 @@ class DispatchUseCase:
             officer.status = "busy"
             
             await self.repo.log_event("DISPATCH_ACCEPTED", {"alert_id": alert_id, "officer_id": officer_id})
+            
+            from app.utils.websocket_manager import manager
+            import asyncio
+            for oid in pinged_officers:
+                if oid != officer_id:
+                    asyncio.create_task(manager.send_personal_message({"type": "DISPATCH_CANCELLED"}, oid))
+                    
             return {"status": "accepted"}
             
         elif action in ("reject", "missed"):
             if officer_id in pinged_officers:
                 pinged_officers.remove(officer_id)
-                alert.pinged_officer_ids = pinged_officers
+                alert.pinged_officer_ids = list(pinged_officers)
                 
             rejected_officers = alert.rejected_officer_ids or []
             if isinstance(rejected_officers, str):
                 rejected_officers = json.loads(rejected_officers)
             if officer_id not in rejected_officers:
                 rejected_officers.append(officer_id)
-                alert.rejected_officer_ids = rejected_officers
+                alert.rejected_officer_ids = list(rejected_officers)
                 
             await self.repo.log_event(f"DISPATCH_{action.upper()}", {"alert_id": alert_id, "officer_id": officer_id})
             
@@ -97,13 +104,18 @@ class DispatchUseCase:
         )
 
         if not top_officers_data:
-            alert.status = "no_officers_available"
+            alert.pinged_officer_ids = []
             return {"status": "no_officers"}
 
         all_officer_ids = [row.Officer.id for row in top_officers_data]
         closest_distance = top_officers_data[0].distance
 
         alert.pinged_officer_ids = all_officer_ids
+
+        from app.utils.websocket_manager import manager
+        import asyncio
+        for oid in all_officer_ids:
+            asyncio.create_task(manager.send_personal_message({"type": "DISPATCH_INCOMING"}, oid))
 
         return {
             "status": "dispatched",

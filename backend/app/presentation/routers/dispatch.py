@@ -1,5 +1,5 @@
 """Dispatch router — Presentation Layer (Clean Architecture)."""
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.utils.database import get_db
 from app.models.schemas import LocationPing, DispatchResponse, OfficerBackupRequest
@@ -7,6 +7,7 @@ from app.infrastructure.repositories.dispatch_repository import DispatchReposito
 from app.use_cases.dispatch_usecase import DispatchUseCase
 
 router = APIRouter()
+from app.utils.websocket_manager import manager
 
 def get_dispatch_usecase(db: AsyncSession = Depends(get_db)) -> DispatchUseCase:
     repo = DispatchRepository(db)
@@ -74,3 +75,12 @@ async def request_backup(
     
     await usecase.repo.commit()
     return result
+
+@router.websocket("/ws/officer/{officer_id}")
+async def websocket_endpoint(websocket: WebSocket, officer_id: int):
+    await manager.connect(officer_id, websocket)
+    try:
+        while True:
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        manager.disconnect(officer_id, websocket)

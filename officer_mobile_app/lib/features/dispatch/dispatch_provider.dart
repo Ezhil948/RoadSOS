@@ -1,9 +1,11 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:go_router/go_router.dart';
 import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/services.dart';
+import 'package:web_socket_channel/web_socket_channel.dart';
 
 import '../../core/network/api_client.dart';
 import '../../core/network/api_endpoints.dart';
@@ -38,6 +40,7 @@ class DispatchPollingNotifier extends StateNotifier<OfficerStatus> {
   
   Position? _currentPosition;
   StreamSubscription<Position>? _positionStreamSub;
+  WebSocketChannel? _wsChannel;
 
   // Officer ID from Hive auth state (fallback to 1 for dev)
   int get _officerId => Hive.box('settings').get('officer_id', defaultValue: 1);
@@ -59,14 +62,38 @@ class DispatchPollingNotifier extends StateNotifier<OfficerStatus> {
     state = Online();
     _isPolling = true;
     _pollLoop();
+    _connectWebSocket();
+  }
+
+  void _connectWebSocket() {
+    _wsChannel?.sink.close();
+    final wsUrl = ApiEndpoints.wsDispatch(_officerId);
+    _wsChannel = WebSocketChannel.connect(Uri.parse(wsUrl));
+    _wsChannel?.stream.listen((message) {
+      if (message is String) {
+        try {
+          final data = jsonDecode(message);
+          if (data['type'] == 'DISPATCH_INCOMING' || data['type'] == 'DISPATCH_CANCELLED') {
+            _fetchDispatch();
+          }
+        } catch (_) {}
+      }
+    }, onError: (e) {
+      print('WebSocket error: $e');
+    }, onDone: () {
+      print('WebSocket closed. Reconnecting...');
+      if (_isPolling) {
+        Future.delayed(const Duration(seconds: 5), _connectWebSocket);
+      }
+    });
   }
 
   Future<void> _pollLoop() async {
     if (!_isPolling) return;
     await _tick();
     if (_isPolling) {
-      // Wait 3 seconds *after* the previous request completes
-      Future.delayed(const Duration(seconds: 3), _pollLoop);
+      // Wait 10 seconds for location ping to save battery and network
+      Future.delayed(const Duration(seconds: 10), _pollLoop);
     }
   }
 
@@ -74,6 +101,8 @@ class DispatchPollingNotifier extends StateNotifier<OfficerStatus> {
     _isPolling = false;
     _positionStreamSub?.cancel();
     _positionStreamSub = null;
+    _wsChannel?.sink.close();
+    _wsChannel = null;
     state = Offline();
     
     // Attempt to notify server
@@ -112,22 +141,40 @@ class DispatchPollingNotifier extends StateNotifier<OfficerStatus> {
         },
       );
 
-      // 2. Poll for dispatch
-      if (state is Online) {
-        final res = await dio.get(ApiEndpoints.pollDispatch(_officerId));
-        if (res.data['has_dispatch'] == true) {
-          final dispatchMap = res.data['dispatch'];
-          final dispatch = DispatchModel.fromJson(dispatchMap);
-          state = Dispatching(dispatch);
-          _triggerDispatchAlert();
+      // 2. Poll backup status if active (Keep this in the loop for now, or this could also be WS)
+      if (state is Navigating) {
+        if ((state as Navigating).backupAlertId != null) {
+          final bRes = await dio.get(ApiEndpoints.getAlertStatus((state as Navigating).backupAlertId!));
+          if (bRes.data['status'] == 'cancelled_by_police') {
+             state = Navigating((state as Navigating).dispatch, backupAlertId: null);
+             HapticFeedback.vibrate();
+             print("Your backup request was cancelled by another officer.");
+          }
         }
       }
+      
 
-      // 3. If Navigating, check if the citizen cancelled the alert or updated location
-      if (state is Navigating) {
+      _failCount = 0;
+    } catch (e) {
+      _failCount++;
+      if (_failCount >= 3) {
+        print("Connection warning: $e");
+      }
+    }
+  }
+
+  Future<void> _fetchDispatch() async {
+    try {
+      final dio = ref.read(dioProvider);
+      final res = await dio.get(ApiEndpoints.pollDispatch(_officerId));
+      
+      if (state is Online && res.data['has_dispatch'] == true) {
+        final dispatchMap = res.data['dispatch'];
+        final dispatch = DispatchModel.fromJson(dispatchMap);
+        state = Dispatching(dispatch);
+        _triggerDispatchAlert();
+      } else if (state is Navigating) {
         final currentDispatch = (state as Navigating).dispatch;
-        final res = await dio.get(ApiEndpoints.pollDispatch(_officerId));
-        
         if (res.data['has_dispatch'] == false) {
           state = Online();
           _onAlertCancelled(currentDispatch.alertId);
@@ -147,24 +194,12 @@ class DispatchPollingNotifier extends StateNotifier<OfficerStatus> {
             }
           }
         }
-        
-        // Poll backup status if active
-        if ((state as Navigating).backupAlertId != null) {
-          final bRes = await dio.get(ApiEndpoints.getAlertStatus((state as Navigating).backupAlertId!));
-          if (bRes.data['status'] == 'cancelled_by_police') {
-             state = Navigating(currentDispatch, backupAlertId: null);
-             HapticFeedback.vibrate();
-             print("Your backup request was cancelled by another officer.");
-          }
-        }
+      } else if (state is Dispatching && res.data['has_dispatch'] == false) {
+          state = Online();
+          HapticFeedback.vibrate();
       }
-      
-      _failCount = 0;
     } catch (e) {
-      _failCount++;
-      if (_failCount >= 3) {
-        print("Connection warning: $e");
-      }
+      print("Fetch dispatch error: $e");
     }
   }
 
@@ -200,6 +235,9 @@ class DispatchPollingNotifier extends StateNotifier<OfficerStatus> {
       }
     } catch (e) {
       print("Failed to respond to dispatch");
+      if (!accept) {
+        state = Online();
+      }
     }
   }
 
@@ -348,6 +386,7 @@ class DispatchPollingNotifier extends StateNotifier<OfficerStatus> {
   void dispose() {
     _isPolling = false;
     _positionStreamSub?.cancel();
+    _wsChannel?.sink.close();
     _audioPlayer.dispose();
     super.dispose();
   }

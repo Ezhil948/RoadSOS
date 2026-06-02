@@ -6,14 +6,13 @@ from app.utils.database import get_db
 from app.models.schemas import SOSRequest, SOSResponse, ResolveRequest, CitizenCancelRequest, PoliceCancelRequest
 from pydantic import BaseModel
 from typing import Optional, List
-import json, httpx, os, base64
+import json
 
 from app.infrastructure.repositories.sos_repository import SOSRepository
 from app.use_cases.sos_usecase import SOSUseCase
-from app.routers.dispatch import trigger_dispatch_internal
+from app.presentation.routers.dispatch import trigger_dispatch_internal
 
 router = APIRouter()
-IMGBB_API_KEY = os.getenv("IMGBB_API_KEY")
 
 class LocationUpdateRequest(BaseModel):
     new_lat: float
@@ -152,31 +151,4 @@ async def nuke_database(db: AsyncSession = Depends(get_db)):
     await db.execute(delete(AppLog))
     return {"status": "success", "message": "All emergency data nuked"}
 
-# Background Task
-async def upload_photos_task(alert_id: int, photos: List[str], db: AsyncSession):
-    from app.models.db_models import SOSAlert
-    try:
-        photo_urls = []
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            for idx, b64_str in enumerate(photos):
-                try:
-                    if "," in b64_str:
-                        b64_str = b64_str.split(",")[1]
-                    file_bytes = base64.b64decode(b64_str)
-                    files = {"image": (f"incident_{alert_id}_{idx}.jpg", file_bytes, "image/jpeg")}
-                    res = await client.post(f"https://api.imgbb.com/1/upload?key={IMGBB_API_KEY}", files=files)
-                    if res.status_code == 200:
-                        url = res.json().get("data", {}).get("url")
-                        if url:
-                            photo_urls.append(url)
-                except Exception as e:
-                    print(f"ImgBB upload error: {e}")
-        
-        if photo_urls:
-            result = await db.execute(select(SOSAlert).where(SOSAlert.id == alert_id))
-            alert = result.scalar_one_or_none()
-            if alert:
-                alert.closure_photo_urls = photo_urls
-                await db.commit()
-    finally:
-        await db.close()
+

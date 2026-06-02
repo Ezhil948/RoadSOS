@@ -18,9 +18,10 @@ All four applications have been recently migrated to **Clean Architecture (Domai
 RoadSOS/
 ├── backend/                  # FastAPI Server
 │   └── app/
-│       ├── routers/          # Presentation Layer (Thin HTTP endpoints like sos.py)
+│       ├── presentation/     # Thin HTTP endpoints (formerly routers)
 │       ├── domain/           # Business Logic (e.g., sos_usecase.py handles cooldowns)
-│       └── data/             # Database Layer (e.g., sos_repository.py handles raw SQL)
+│       ├── data/             # Database Layer (e.g., sos_repository.py handles raw SQL)
+│       └── utils/            # Utilities (e.g., websocket_manager.py)
 │
 ├── flutter_app_v2/           # Citizen Mobile App
 │   └── lib/features/emergency/
@@ -30,12 +31,11 @@ RoadSOS/
 │
 ├── officer_mobile_app/       # Police Officer App
 │   └── lib/features/dispatch/
-│       ├── data/             # Repositories (dispatch_repository_impl.dart manages siren audio)
-│       ├── domain/           # UseCases (respond_dispatch_usecase.dart)
-│       └── presentation/     # UI State (dispatch_provider.dart manages incoming alert state)
+│       └── dispatch_provider.dart # UI State & centralized dispatch logic
 │
 └── admin_dashboard/          # Headquarters Web Dashboard
     └── src/
+        ├── components/       # Organized into layout/, overlays/, and widgets/
         ├── data/             # Repositories (DashboardRepositoryImpl.js handles fetch calls)
         ├── domain/           # UseCases (FetchDashboardDataUseCase.js sorts active vs past alerts)
         └── presentation/     # Custom Hooks (useDashboardData.js manages polling loops)
@@ -43,11 +43,17 @@ RoadSOS/
 
 ## 4. Current State (What Works)
 - **Database Optimization**: Heavy O(N) memory bottlenecks have been completely eliminated. Geo-spatial Haversine distance sorting is now performed instantly at the MySQL database layer using `func.acos`.
-- **Backend Clean Architecture**: The massive "Fat Controllers" for the `SOS`, `Dispatch`, `Auth`, and `Accident Reports` modules have been successfully broken down into Data Repositories and Domain Use Cases.
-- **Frontend/Mobile Clean Architecture**: The complex state loops (e.g., polling timers, hardware sirens, offline SMS fallbacks) have been successfully decoupled from the UI widgets in the Citizen App, Officer App, and React Dashboard.
-- **Officer App UI Revamp**: The Officer Mobile App has received a major aesthetic overhaul, including a premium glassmorphic login screen, completely redesigned custom shields/badges, an updated Splash Screen, and a much cleaner, compact Home Duty layout with refined metrics and action buttons. Settings UI has also been decluttered.
-- **Repository Cleanup**: The unused E-commerce UI template folder has been completely moved out of the project repository to a backup location, significantly reducing clutter and narrowing the focus to just the Citizen and Officer apps.
+- **Backend Clean Architecture**: The massive "Fat Controllers" for the `SOS`, `Dispatch`, `Auth`, and `Accident Reports` modules have been successfully broken down into Data Repositories and Domain Use Cases. The presentation layer was properly renamed from `routers/` to `presentation/`. WebSocket capabilities (`websocket_manager.py`) have also been added.
+- **Frontend/Mobile Clean Architecture**: The complex state loops (e.g., polling timers, hardware sirens, offline SMS fallbacks) have been successfully decoupled from the UI widgets in the Citizen App, Officer App, and React Dashboard. In the Officer App, the dispatch module was simplified by removing redundant clean architecture boilerplate to centralize logic.
+- **Admin Dashboard Overhaul**: The HQ Admin Dashboard has been completely rebuilt following the "Dark Ops Command Center" UX/UI Blueprint. It features a premium, responsive glassmorphic design using custom CSS variables (tokens.css) without Tailwind, complete with real-time mapping, alerts list, and data polling loops. Components were cleanly reorganized into `layout/`, `overlays/`, and `widgets/`.
+- **Officer App UI Revamp**: The Officer Mobile App has received a major aesthetic overhaul, including a premium glassmorphic login screen, completely redesigned custom shields/badges, an updated Splash Screen, and a much cleaner, compact Home Duty layout.
+- **Uber-style Dispatch System**: The continuous scanning dispatch loop is fully operational. It continuously scans for 5 minutes for new active officers if none are initially available.
+- **Bug Fixes**: 
+  - Backend schema auto-migrations implemented for missing `pinged_officer_ids` and `rejected_officer_ids` columns.
+  - Citizen App SOS cancellation UI race condition fixed.
+  - Officer App dispatch rejection SQL JSON mutation bug fixed (officers can now successfully dismiss dispatches).
+- **Repository Cleanup**: The unused E-commerce UI template folder has been completely moved out of the project repository to a backup location. The legacy `flutter_app/` (v1) was completely removed to avoid confusion with `flutter_app_v2`.
 
 ## 5. Work In Progress & Next Steps
-- **Web Admin Dashboard UI**: Build out the React Admin Dashboard vertical slice or proceed with end-to-end integration testing across the production environment.
+- **End-to-End Testing**: Proceed with end-to-end integration testing across the production environment for all scenarios (multi-officer dispatch, concurrent accident reporting, and dashboard synchronization).
 - **Flutter Web Finalization**: Ensure all UI tweaks in the Officer App remain responsive across different environments.

@@ -235,18 +235,21 @@ class _GlobalDispatchOverlayState extends ConsumerState<GlobalDispatchOverlay> w
                       children: [
                         // Reject Button
                         Expanded(
-                          child: InkWell(
-                            onTap: () => ref.read(dispatchProvider.notifier).respondToDispatch(false),
+                          child: Material(
+                            color: isDark ? const Color(0xFF334155) : const Color(0xFFF1F5F9),
                             borderRadius: BorderRadius.circular(10),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              decoration: BoxDecoration(
-                                color: isDark ? const Color(0xFF334155) : const Color(0xFFF1F5F9),
-                                borderRadius: BorderRadius.circular(10),
-                                border: Border.all(color: isDark ? const Color(0xFF475569) : const Color(0xFFE2E8F0)),
-                              ),
-                              child: Center(
-                                child: Icon(Icons.close_rounded, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B), size: 28),
+                            child: InkWell(
+                              onTap: () => ref.read(dispatchProvider.notifier).respondToDispatch(false),
+                              borderRadius: BorderRadius.circular(10),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                decoration: BoxDecoration(
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(color: isDark ? const Color(0xFF475569) : const Color(0xFFE2E8F0)),
+                                ),
+                                child: Center(
+                                  child: Icon(Icons.close_rounded, color: isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B), size: 28),
+                                ),
                               ),
                             ),
                           ),
@@ -255,28 +258,34 @@ class _GlobalDispatchOverlayState extends ConsumerState<GlobalDispatchOverlay> w
                         // Accept Button
                         Expanded(
                           flex: 2,
-                          child: InkWell(
-                            onTap: () => ref.read(dispatchProvider.notifier).respondToDispatch(true),
-                            borderRadius: BorderRadius.circular(10),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              decoration: BoxDecoration(
-                                gradient: const LinearGradient(
-                                  colors: [Color(0xFF059669), Color(0xFF10B981)],
-                                  begin: Alignment.topCenter,
-                                  end: Alignment.bottomCenter,
-                                ),
-                                borderRadius: BorderRadius.circular(10),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: const Color(0xFF10B981).withOpacity(0.3),
-                                    blurRadius: 12,
-                                    offset: const Offset(0, 4),
-                                  )
-                                ]
+                          child: Container(
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFF059669), Color(0xFF10B981)],
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
                               ),
-                              child: const Center(
-                                child: Icon(Icons.check_rounded, color: Colors.white, size: 28),
+                              borderRadius: BorderRadius.circular(10),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: const Color(0xFF10B981).withOpacity(0.3),
+                                  blurRadius: 12,
+                                  offset: const Offset(0, 4),
+                                )
+                              ]
+                            ),
+                            child: Material(
+                              color: Colors.transparent,
+                              borderRadius: BorderRadius.circular(10),
+                              child: InkWell(
+                                onTap: () => ref.read(dispatchProvider.notifier).respondToDispatch(true),
+                                borderRadius: BorderRadius.circular(10),
+                                child: const Padding(
+                                  padding: EdgeInsets.symmetric(vertical: 14),
+                                  child: Center(
+                                    child: Icon(Icons.check_rounded, color: Colors.white, size: 28),
+                                  ),
+                                ),
                               ),
                             ),
                           ),

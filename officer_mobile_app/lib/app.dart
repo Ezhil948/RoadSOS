@@ -15,10 +15,7 @@ import 'features/profile/profile_screen.dart';
 import 'features/settings/settings_screen.dart';
 import 'features/history/history_screen.dart';
 import 'features/dispatch/resolution_screen.dart';
-import 'features/dispatch/presentation/state/dispatch_provider.dart' as clean;
-import 'features/dispatch/data/repositories/dispatch_repository_impl.dart';
-import 'features/dispatch/domain/use_cases/respond_dispatch_usecase.dart';
-import 'services/api_service.dart'; // Assuming this exists
+import 'features/dispatch/dispatch_provider.dart';
 
 import 'features/map/main_map_screen.dart';
 import 'widgets/global_dispatch_overlay.dart';
@@ -27,25 +24,18 @@ final connectivityProvider = StreamProvider<List<ConnectivityResult>>((ref) {
   return Connectivity().onConnectivityChanged;
 });
 
-final apiServiceProvider = Provider<ApiService>((ref) => ApiService());
-
-final cleanDispatchProvider = ChangeNotifierProvider<clean.DispatchProvider>((ref) {
-  final api = ref.watch(apiServiceProvider);
-  final repo = DispatchRepositoryImpl(api);
-  final useCase = RespondDispatchUseCase(repo);
-  return clean.DispatchProvider(repository: repo, respondUseCase: useCase);
-});
+// removed cleanDispatchProvider
 
 final networkStatusProvider = Provider<Color>((ref) {
   final connectivity = ref.watch(connectivityProvider).value;
-  final dispatchState = ref.watch(cleanDispatchProvider).uiState;
+  final dispatchState = ref.watch(dispatchProvider);
   
   if (connectivity == null || connectivity.contains(ConnectivityResult.none)) {
     return kAccentRed; // red when no network
   }
   
-  if (dispatchState == clean.DispatchUiState.error) {
-    return kAccentAmber; // amber when connected + error
+  if (dispatchState is Offline) {
+    return kAccentAmber; // amber when offline/disconnected
   }
   
   return kAccentGreen; // green when connected + online

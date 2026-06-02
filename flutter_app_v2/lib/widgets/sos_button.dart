@@ -221,6 +221,11 @@ class _SOSButtonState extends State<SOSButton> with SingleTickerProviderStateMix
       
       if (!mounted) return;
       
+      if (_activeAlertId == null) {
+        timer.cancel();
+        return;
+      }
+      
       if (res['status'] == 'error') {
         // Just skip this tick if network drops
         return;

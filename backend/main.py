@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 from contextlib import asynccontextmanager
-from app.routers import services, sos, accident, ai_analysis, sync, emergency, feedback, logs, dispatch, auth
+from app.presentation.routers import services, sos, accident, ai_analysis, sync, emergency, feedback, logs, dispatch, auth
 from app.utils.database import engine, Base, check_db_connection
 import os
 import time

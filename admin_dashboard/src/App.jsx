@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { ShieldAlert, Car, Activity } from 'lucide-react';
-import './index.css';
-import { Card } from './components/Card';
-import { IncidentModal } from './components/IncidentModal';
 import { useDashboardData } from './presentation/state/useDashboardData';
+import { TopCommandBar } from './components/layout/TopCommandBar';
+import { LeftPanel } from './components/layout/LeftPanel';
+import { MainCanvas } from './components/layout/MainCanvas';
+import { AlertFeed } from './components/layout/AlertFeed';
+import { IncidentModal } from './components/overlays/IncidentModal';
+import './styles/tokens.css';
+import './index.css';
 
 export default function App() {
-  const { activeSos, pastSos, activeReports, pastReports, isLoading, refreshData } = useDashboardData(10000);
+  const { activeSos, pastSos, activeReports, pastReports, isLoading, error, refreshData } = useDashboardData(10000);
   const [selectedIncident, setSelectedIncident] = useState(null);
 
   useEffect(() => {
@@ -21,66 +24,39 @@ export default function App() {
     }
   }, [activeSos, pastSos, activeReports, pastReports]);
 
+  const handleCardClick = (item, type) => setSelectedIncident({ item, type });
+  const handleClose = () => setSelectedIncident(null);
+  const handleStatusChange = () => { refreshData(); setSelectedIncident(null); };
+
   return (
-    <div className="app-container">
-      <nav className="navbar">
-        <div className="navbar-brand">
-          <ShieldAlert color="var(--accent-red)" />
-          RoadSOS Officer Dashboard
-        </div>
-      </nav>
-
-      <main className="main-content">
-        <div className="dashboard-grid">
-          
-          {/* Column 1: SOS Alerts */}
-          <div>
-            <div className="section-header">
-              <Activity size={18} /> Active SOS Alerts ({activeSos.length})
-            </div>
-            {activeSos.length === 0 && <p style={{ color: 'var(--text-secondary)' }}>No active alerts.</p>}
-            {activeSos.map(a => (
-              <Card key={`sos-${a.id}`} item={a.data} type="sos" onClick={(item, type) => setSelectedIncident({ item, type })} />
-            ))}
-
-            <div className="section-header" style={{ marginTop: '32px' }}>
-              Past Alerts
-            </div>
-            {pastSos.slice(0, 5).map(a => (
-              <Card key={`sos-${a.id}`} item={a.data} type="sos" onClick={(item, type) => setSelectedIncident({ item, type })} />
-            ))}
-          </div>
-
-          {/* Column 2: Accident Reports */}
-          <div>
-            <div className="section-header">
-              <Car size={18} /> Open Accident Reports ({activeReports.length})
-            </div>
-            {activeReports.length === 0 && <p style={{ color: 'var(--text-secondary)' }}>No open reports.</p>}
-            {activeReports.map(r => (
-              <Card key={`rep-${r.id}`} item={r.data} type="report" onClick={(item, type) => setSelectedIncident({ item, type })} />
-            ))}
-
-            <div className="section-header" style={{ marginTop: '32px' }}>
-              Resolved Reports
-            </div>
-            {pastReports.slice(0, 5).map(r => (
-              <Card key={`rep-${r.id}`} item={r.data} type="report" onClick={(item, type) => setSelectedIncident({ item, type })} />
-            ))}
-          </div>
-
-        </div>
-      </main>
-
+    <div className="app-shell">
+      <TopCommandBar
+        isLoading={isLoading}
+        error={error}
+        refreshData={refreshData}
+        totalActive={activeSos.length + activeReports.length}
+        totalSos={activeSos.length}
+        totalReports={activeReports.length}
+      />
+      <div className="app-body">
+        <LeftPanel />
+        <MainCanvas
+          activeSos={activeSos}
+          activeReports={activeReports}
+          onCardClick={handleCardClick}
+        />
+        <AlertFeed
+          pastSos={pastSos}
+          pastReports={pastReports}
+          onItemClick={handleCardClick}
+        />
+      </div>
       {selectedIncident && (
-        <IncidentModal 
-          incident={selectedIncident.item} 
-          type={selectedIncident.type} 
-          onClose={() => setSelectedIncident(null)} 
-          onStatusChange={() => {
-            refreshData();
-            setSelectedIncident(null);
-          }}
+        <IncidentModal
+          incident={selectedIncident.item}
+          type={selectedIncident.type}
+          onClose={handleClose}
+          onStatusChange={handleStatusChange}
         />
       )}
     </div>

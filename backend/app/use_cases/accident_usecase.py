@@ -1,5 +1,5 @@
 from app.infrastructure.repositories.accident_repository import AccidentRepository
-from app.routers.dispatch import trigger_dispatch_internal
+from app.presentation.routers.dispatch import trigger_dispatch_internal
 from app.models.db_models import AccidentStatusEnum
 import httpx
 import json

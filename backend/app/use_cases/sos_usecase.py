@@ -184,8 +184,9 @@ class SOSUseCase:
         
         if photos:
             from app.utils.database import AsyncSessionLocal
-            from app.routers.sos import upload_photos_task # import the background worker
-            background_tasks.add_task(upload_photos_task, alert_id, photos, AsyncSessionLocal())
+            from app.infrastructure.services.storage_service import StorageService
+            storage_service = StorageService()
+            background_tasks.add_task(storage_service.upload_photos_task, alert_id, photos, AsyncSessionLocal())
             
         await self.repo.flush()
         await self.repo.log_event("INCIDENT_CLOSED", {"alert_id": alert_id, "photos": len(photos) if photos else 0})
