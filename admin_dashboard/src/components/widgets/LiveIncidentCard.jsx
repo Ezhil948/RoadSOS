@@ -33,10 +33,11 @@ export function LiveIncidentCard({ item, type, onClick }) {
             ?? item?.phone_number 
             ?? 'Unknown Reporter';
             
-  const hasLocation = item?.latitude !== undefined && item?.latitude !== null &&
-                      item?.longitude !== undefined && item?.longitude !== null;
+  const lat = item?.latitude ?? item?.lat;
+  const lng = item?.longitude ?? item?.lng;
+  const hasLocation = lat !== undefined && lat !== null && lng !== undefined && lng !== null;
                       
-  const timestamp = item?.created_at ?? item?.timestamp;
+  const timestamp = item?.created_at ?? item?.timestamp ?? item?.alerted_at;
   const timeStr = timeAgo(timestamp);
   
   const requiresManualDispatch = item?.requires_manual_dispatch;
@@ -75,7 +76,7 @@ export function LiveIncidentCard({ item, type, onClick }) {
       {/* Row 3: Location */}
       <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '11px', color: hasLocation ? 'var(--text-secondary)' : 'var(--text-tertiary)', zIndex: 1 }}>
         {hasLocation 
-          ? `Lat ${Number(item.latitude).toFixed(4)}, Lng ${Number(item.longitude).toFixed(4)}`
+          ? `Lat ${Number(lat).toFixed(4)}, Lng ${Number(lng).toFixed(4)}`
           : 'Location unavailable'
         }
       </div>
