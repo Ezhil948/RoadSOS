@@ -22,7 +22,7 @@ export function StatChip({ value, label, accent }) {
       alignItems: 'center',
       gap: '8px'
     }}>
-      <span style={{ fontFamily: 'Syne, sans-serif', fontSize: '18px', fontWeight: 500, color: textColor }}>
+      <span style={{ fontFamily: 'DM Sans, sans-serif', fontSize: '18px', fontWeight: 500, color: textColor }}>
         {value}
       </span>
       <span style={{ fontFamily: 'DM Sans, sans-serif', fontSize: '11px', fontWeight: 500, color: 'var(--text-secondary)' }}>
