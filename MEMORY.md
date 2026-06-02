@@ -53,15 +53,19 @@ RoadSOS/
   - Citizen App SOS cancellation UI race condition fixed.
   - Officer App dispatch rejection SQL JSON mutation bug fixed (officers can now successfully dismiss dispatches).
   - Backend dispatch silent failures fixed by gracefully flagging missing GPS alerts for manual dispatch.
-  - Admin Dashboard UI bug fixed where incidents incorrectly showed 'Location unavailable' due to a JSON key mismatch.
-  - Officer App WebSocket backgrounding bug fixed by implementing a robust HTTP fallback polling loop (`_fetchDispatch()`) to ensure dispatches are received even if the OS suspends the app.
+  - Admin Dashboard UI bug fixed where incidents incorrectly showed 'Location unavailable' due to a JSON key mismatch (`latitude`/`longitude` vs `lat`/`lng`).
+  - Officer App WebSocket backgrounding bug fixed by implementing a robust HTTP fallback polling loop (`_fetchDispatch()`) to ensure dispatches are received even if the OS suspends the app when running alongside the Citizen App on the same device.
+  - Admin Dashboard card glow and white-on-hover effect removed by stripping `box-shadow`, `animation`, and `::before` radial gradient overlay from `LiveIncidentCard.css`.
+  - Timestamp "5 hrs ago" timezone bug fixed — backend now appends `Z` to `alerted_at` so browsers correctly parse it as UTC instead of local IST time (which was 5.5 hrs off).
+  - Police cancel alert was silently failing because the DB `status` column was a strict ENUM that did not include `cancelled_by_police` or `cancelled_by_citizen`. Fixed by migrating the column from `ENUM` to `VARCHAR(30)` on both the live Aiven DB and `main.py` startup migrations.
+  - Dashboard UNASSIGNED badge showing even after officer accepted — fixed by adding `accepted_officer_id` to the `list_sos_alerts` API response and updating `LiveIncidentCard.jsx` to use `isDispatched = officerName || accepted_officer_id`.
 - **Repository Cleanup**: The unused E-commerce UI template folder has been completely moved out of the project repository to a backup location. The legacy `flutter_app/` (v1) was completely removed to avoid confusion with `flutter_app_v2`.
 ### 4.4 Operational Edge Case Overhaul
 - **Manual Dispatch Fallback**: Unaccepted alerts after 60s are flagged for manual dispatch and displayed prominently on the Admin Dashboard.
 - **Structured Officer Resolution**: Officers are required to categorize the incident upon resolution in the Officer App, and this is persisted and visible on the dashboard.
 - **Spam Prevention & Grace Periods**: A strict 5-minute cooldown is enforced for citizens after raising an alert. However, a 15-second grace period is provided allowing the citizen to cancel an alert as a "false alarm" without penalty.
 - **Real-time False Alarm Notifications**: Officer apps intercept `ALERT_CANCELLED_FALSE_ALARM` websocket events and automatically dismiss active dispatch screens with a false alarm dialog, avoiding unnecessary travel.
-- **v4.4 APKs**: Optimized ARM64 release builds for both the Citizen App (`citizen_app_4.4_arm64.apk`) and Police/Officer App (`police_app_4.4_arm64.apk`) have been generated and saved to `apk/4.4/`.
+- **v4.4 APKs**: Optimized ARM64 release builds for both the Citizen App (`citizen_app_4.4_arm64.apk`) and Police/Officer App (`police_app_4.4_arm64.apk`) have been generated and saved to `apk/4.4/`. The Police App APK was rebuilt after the WebSocket backgrounding fix.
 
 ## 5. Work In Progress & Next Steps
 - **End-to-End Testing**: Proceed with end-to-end integration testing across the production environment for all scenarios (multi-officer dispatch, concurrent accident reporting, and dashboard synchronization).
