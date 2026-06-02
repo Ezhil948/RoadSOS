@@ -92,8 +92,12 @@ class DispatchUseCase:
 
     async def find_and_assign_officers(self, alert_id: int):
         alert = await self.repo.get_alert(alert_id)
-        if not alert or not alert.latitude or not alert.longitude:
-            return {"status": "error", "message": "Alert not found or invalid location"}
+        if not alert:
+            return {"status": "error", "message": "Alert not found"}
+        if not alert.latitude or not alert.longitude:
+            alert.requires_manual_dispatch = True
+            await self.repo.session.flush()
+            return {"status": "manual_dispatch_required", "message": "Alert has no location data"}
 
         rejected_ids = alert.rejected_officer_ids or []
         if isinstance(rejected_ids, str):
