@@ -52,7 +52,7 @@ export function LiveIncidentCard({ item, type, onClick }) {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', zIndex: 1 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
           <PulsingDot color={isSos ? 'red' : 'amber'} size="sm" />
-          <StatusBadge status={status} />
+          <StatusBadge status={status} isSos={isSos} />
         </div>
         <div>
           {requiresManualDispatch ? (
@@ -60,7 +60,7 @@ export function LiveIncidentCard({ item, type, onClick }) {
               MANUAL DISPATCH
             </span>
           ) : isDispatched ? (
-            <StatusBadge status="DISPATCHED" />
+            <StatusBadge status="DISPATCHED" isSos={isSos} />
           ) : (
             <span style={{ fontFamily: 'DM Sans, sans-serif', fontSize: '10px', fontWeight: 600, color: 'var(--text-tertiary)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
               UNASSIGNED

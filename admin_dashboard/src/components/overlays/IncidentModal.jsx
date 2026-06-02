@@ -156,8 +156,8 @@ export const IncidentModal = ({ incident, type, onClose, onStatusChange }) => {
             <div>
               <div style={labelStyle}>Status</div>
               <div style={{ display: 'flex', gap: '8px' }}>
-                <StatusBadge status={incident.status} />
-                {incident.severity && <StatusBadge status={incident.severity} />}
+                <StatusBadge status={incident.status} isSos={isSOS} />
+                {incident.severity && <StatusBadge status={incident.severity} isSos={isSOS} />}
               </div>
             </div>
           </div>

@@ -291,9 +291,11 @@ class DispatchPollingNotifier extends StateNotifier<OfficerStatus> {
   }
 
   Future<void> resolveDispatch(bool isFalseAlarm, String notes, [List<String>? photos, String? category]) async {
-    if (state is! Arrived) return;
+    DispatchModel? currentDispatch;
+    if (state is Navigating) currentDispatch = (state as Navigating).dispatch;
+    else if (state is Arrived) currentDispatch = (state as Arrived).dispatch;
     
-    final currentDispatch = (state as Arrived).dispatch;
+    if (currentDispatch == null) return;
     try {
       final dio = ref.read(dioProvider);
       

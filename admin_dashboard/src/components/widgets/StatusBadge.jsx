@@ -1,6 +1,6 @@
 import React from 'react';
 
-export function StatusBadge({ status }) {
+export function StatusBadge({ status, isSos }) {
   const upperStatus = (status || '').toUpperCase();
   let fill, textColor, label, borderColor;
 
@@ -16,9 +16,9 @@ export function StatusBadge({ status }) {
     case 'DISPATCHED':
     case 'ASSIGNED':
       label = 'DISPATCHED';
-      fill = 'var(--blue-fill)';
-      textColor = 'var(--blue-vivid)';
-      borderColor = 'var(--blue-border)';
+      fill = isSos ? 'var(--red-fill)' : 'var(--amber-fill)';
+      textColor = isSos ? 'var(--red-vivid)' : 'var(--amber-vivid)';
+      borderColor = isSos ? 'var(--red-border)' : 'var(--amber-border)';
       break;
     case 'RESOLVED':
     case 'CLOSED':
