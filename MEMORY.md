@@ -52,6 +52,9 @@ RoadSOS/
   - Backend schema auto-migrations implemented for missing `pinged_officer_ids` and `rejected_officer_ids` columns.
   - Citizen App SOS cancellation UI race condition fixed.
   - Officer App dispatch rejection SQL JSON mutation bug fixed (officers can now successfully dismiss dispatches).
+  - Backend dispatch silent failures fixed by gracefully flagging missing GPS alerts for manual dispatch.
+  - Admin Dashboard UI bug fixed where incidents incorrectly showed 'Location unavailable' due to a JSON key mismatch.
+  - Officer App WebSocket backgrounding bug fixed by implementing a robust HTTP fallback polling loop (`_fetchDispatch()`) to ensure dispatches are received even if the OS suspends the app.
 - **Repository Cleanup**: The unused E-commerce UI template folder has been completely moved out of the project repository to a backup location. The legacy `flutter_app/` (v1) was completely removed to avoid confusion with `flutter_app_v2`.
 ### 4.4 Operational Edge Case Overhaul
 - **Manual Dispatch Fallback**: Unaccepted alerts after 60s are flagged for manual dispatch and displayed prominently on the Admin Dashboard.
