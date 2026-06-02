@@ -9,7 +9,7 @@ class SOSRepository:
     def __init__(self, session: AsyncSession):
         self.session = session
 
-    async def get_recent_alert_by_device(self, device_id: str, seconds: int = 150) -> SOSAlert:
+    async def get_recent_alert_by_device(self, device_id: str, seconds: int = 300) -> SOSAlert:
         result = await self.session.execute(
             select(SOSAlert).where(
                 SOSAlert.device_id == device_id,
@@ -61,6 +61,8 @@ class SOSRepository:
 
     async def cancel_timeout_alerts(self, seconds: int = 300):
         cutoff_time = datetime.utcnow() - timedelta(seconds=seconds)
+        
+        # 1. Cancel entirely if past 5 minutes
         await self.session.execute(
             update(SOSAlert).where(
                 SOSAlert.status == "active",
@@ -73,6 +75,20 @@ class SOSRepository:
                 resolved_at=func.now()
             )
         )
+        
+        # 2. Flag for manual dispatch if past 1 minute
+        manual_cutoff = datetime.utcnow() - timedelta(seconds=60)
+        await self.session.execute(
+            update(SOSAlert).where(
+                SOSAlert.status == "active",
+                SOSAlert.accepted_officer_id.is_(None),
+                SOSAlert.requires_manual_dispatch == False,
+                SOSAlert.alerted_at < manual_cutoff
+            ).values(
+                requires_manual_dispatch=True
+            )
+        )
+        
         await self.session.flush()
 
     async def get_alerts(self, status: str = None, limit: int = 50):

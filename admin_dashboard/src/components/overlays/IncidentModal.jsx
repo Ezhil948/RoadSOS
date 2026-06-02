@@ -168,6 +168,29 @@ export const IncidentModal = ({ incident, type, onClose, onStatusChange }) => {
              </div>
           )}
 
+          {isSOS && incident.status === 'resolved' && (
+             <>
+               <div>
+                 <div style={{ fontFamily: 'Syne, sans-serif', fontSize: '13px', fontWeight: 700, letterSpacing: '0.08em', color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '8px', marginTop: '16px' }}>Resolution Details</div>
+                 <div style={{ background: 'var(--bg-surface-2)', padding: 'var(--space-4)', borderRadius: 'var(--radius-sm)', fontFamily: 'DM Sans, sans-serif', fontSize: '13px', color: 'var(--text-primary)' }}>
+                   <div style={{ marginBottom: '4px' }}><strong style={{ color: 'var(--text-secondary)' }}>Category:</strong> {incident.category || 'N/A'}</div>
+                   <div><strong style={{ color: 'var(--text-secondary)' }}>Notes:</strong> {incident.closure_notes || 'None provided'}</div>
+                 </div>
+               </div>
+               
+               {incident.closure_photo_urls && incident.closure_photo_urls.length > 0 && (
+                 <div>
+                   <div style={{ fontFamily: 'Syne, sans-serif', fontSize: '13px', fontWeight: 700, letterSpacing: '0.08em', color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '8px', marginTop: '16px' }}>Resolution Photos</div>
+                   <div style={{ display: 'flex', gap: '8px', overflowX: 'auto' }}>
+                     {incident.closure_photo_urls.map((url, i) => (
+                       <img key={i} src={`${API_BASE_URL}/${url}`} alt="Resolution" style={{ height: '120px', borderRadius: 'var(--radius-sm)' }} />
+                     ))}
+                   </div>
+                 </div>
+               )}
+             </>
+          )}
+
           {!isSOS && details && (
             <>
               <div>

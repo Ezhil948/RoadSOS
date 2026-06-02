@@ -75,6 +75,10 @@ class DispatchPollingNotifier extends StateNotifier<OfficerStatus> {
           final data = jsonDecode(message);
           if (data['type'] == 'DISPATCH_INCOMING' || data['type'] == 'DISPATCH_CANCELLED') {
             _fetchDispatch();
+          } else if (data['type'] == 'ALERT_CANCELLED_FALSE_ALARM') {
+            state = Online();
+            HapticFeedback.heavyImpact();
+            ref.read(falseAlarmEventProvider.notifier).state = true;
           }
         } catch (_) {}
       }
@@ -284,7 +288,7 @@ class DispatchPollingNotifier extends StateNotifier<OfficerStatus> {
     }
   }
 
-  Future<void> resolveDispatch(bool isFalseAlarm, String notes, [List<String>? photos]) async {
+  Future<void> resolveDispatch(bool isFalseAlarm, String notes, [List<String>? photos, String? category]) async {
     if (state is! Arrived) return;
     
     final currentDispatch = (state as Arrived).dispatch;
@@ -300,6 +304,7 @@ class DispatchPollingNotifier extends StateNotifier<OfficerStatus> {
       } else {
         final data = {
           'officer_notes': notes,
+          if (category != null) 'category': category,
           if (photos != null && photos.isNotEmpty) 'photos': photos,
         };
         await dio.post(
@@ -399,3 +404,5 @@ class DispatchPollingNotifier extends StateNotifier<OfficerStatus> {
 final dispatchProvider = StateNotifierProvider<DispatchPollingNotifier, OfficerStatus>((ref) {
   return DispatchPollingNotifier(ref);
 });
+
+final falseAlarmEventProvider = StateProvider<bool>((ref) => false);

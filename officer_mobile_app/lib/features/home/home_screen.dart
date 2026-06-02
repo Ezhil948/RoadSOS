@@ -17,6 +17,36 @@ class HomeScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    ref.listen<bool>(falseAlarmEventProvider, (previous, current) {
+      if (current) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          showDialog(
+            context: context,
+            builder: (ctx) {
+              final isDark = Theme.of(context).brightness == Brightness.dark;
+              return AlertDialog(
+                backgroundColor: isDark ? kDarkSurface : kLightSurface,
+                title: Text('FALSE ALARM', style: AppTheme.monoMd.copyWith(color: kAccentAmber)),
+                content: Text(
+                  'The citizen cancelled the alert within the 15-second grace period. No action is required.',
+                  style: TextStyle(color: isDark ? kDarkText : kLightText),
+                ),
+                actions: [
+                  ElevatedButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    style: ElevatedButton.styleFrom(backgroundColor: kAccentAmber, foregroundColor: Colors.black),
+                    child: const Text('DISMISS'),
+                  ),
+                ],
+              );
+            },
+          );
+        });
+        // Reset the event
+        Future.microtask(() => ref.read(falseAlarmEventProvider.notifier).state = false);
+      }
+    });
+
     final status = ref.watch(dispatchProvider);
 
     return Scaffold(

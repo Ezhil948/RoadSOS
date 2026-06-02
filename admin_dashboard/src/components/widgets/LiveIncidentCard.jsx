@@ -38,6 +38,8 @@ export function LiveIncidentCard({ item, type, onClick }) {
                       
   const timestamp = item?.created_at ?? item?.timestamp;
   const timeStr = timeAgo(timestamp);
+  
+  const requiresManualDispatch = item?.requires_manual_dispatch;
 
   return (
     <div 
@@ -51,7 +53,11 @@ export function LiveIncidentCard({ item, type, onClick }) {
           <StatusBadge status={status} />
         </div>
         <div>
-          {officerName ? (
+          {requiresManualDispatch ? (
+            <span style={{ fontFamily: 'DM Sans, sans-serif', fontSize: '10px', fontWeight: 700, color: 'var(--accent-red)', letterSpacing: '0.06em', textTransform: 'uppercase', padding: '2px 6px', border: '1px solid var(--accent-red)', borderRadius: '4px' }}>
+              MANUAL DISPATCH
+            </span>
+          ) : officerName ? (
             <StatusBadge status="DISPATCHED" />
           ) : (
             <span style={{ fontFamily: 'DM Sans, sans-serif', fontSize: '10px', fontWeight: 600, color: 'var(--text-tertiary)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>

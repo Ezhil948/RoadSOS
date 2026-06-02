@@ -73,6 +73,9 @@ class SOSAlert(Base):
     citizen_name = Column(String(255), nullable=True)
     citizen_phone = Column(String(50), nullable=True)
 
+    requires_manual_dispatch = Column(Boolean, default=False)
+    category = Column(String(100), nullable=True)
+
     # Overhaul additions
     reporters = Column(JSON, default=list)
     location_update_pending = Column(Boolean, default=False)

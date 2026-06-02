@@ -26,6 +26,7 @@ class LocationPatchRequest(BaseModel):
 class CloseIncidentRequest(BaseModel):
     officer_notes: Optional[str] = None
     photos: Optional[List[str]] = None
+    category: Optional[str] = None
 
 def get_sos_usecase(db: AsyncSession = Depends(get_db)) -> SOSUseCase:
     repo = SOSRepository(db)
@@ -113,7 +114,7 @@ async def patch_alert_location(alert_id: int, payload: LocationPatchRequest, use
 
 @router.post("/alerts/{alert_id}/close", summary="Close incident with evidence")
 async def close_incident(alert_id: int, payload: CloseIncidentRequest, background_tasks: BackgroundTasks, usecase: SOSUseCase = Depends(get_sos_usecase)):
-    result = await usecase.close_incident(alert_id, payload.officer_notes, payload.photos, background_tasks)
+    result = await usecase.close_incident(alert_id, payload.officer_notes, payload.photos, payload.category, background_tasks)
     if "error" in result:
         raise HTTPException(status_code=result.get("status_code", 400), detail=result["error"])
     return result

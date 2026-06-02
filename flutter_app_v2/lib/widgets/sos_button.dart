@@ -84,7 +84,11 @@ class _SOSButtonState extends State<SOSButton> with SingleTickerProviderStateMix
   Future<void> _cancelSOSLocally({bool timeout = false}) async {
     if (_activeAlertId != null) {
       final api = context.read<ApiService>();
-      await api.cancelSosAlert(_activeAlertId!, reason: timeout ? 'timeout' : null);
+      String? reason = timeout ? 'timeout' : null;
+      if (!timeout && _canCancel) {
+        reason = 'false_alarm_grace_period';
+      }
+      await api.cancelSosAlert(_activeAlertId!, reason: reason);
     }
     
     final box = await Hive.openBox('settings');
@@ -183,7 +187,7 @@ class _SOSButtonState extends State<SOSButton> with SingleTickerProviderStateMix
         });
         
         _cancelTimer?.cancel();
-        _cancelTimer = Timer(const Duration(seconds: 10), () {
+        _cancelTimer = Timer(const Duration(seconds: 15), () {
           if (mounted) setState(() => _canCancel = false);
         });
         

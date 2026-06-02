@@ -22,6 +22,7 @@ class ResolutionScreen extends ConsumerStatefulWidget {
 
 class _ResolutionScreenState extends ConsumerState<ResolutionScreen> {
   late TextEditingController _notesController;
+  String? _selectedCategory;
   bool _isFalseAlarm = false;
   bool _showSuccessAnimation = false;
   bool _isSubmitting = false;
@@ -46,6 +47,11 @@ class _ResolutionScreenState extends ConsumerState<ResolutionScreen> {
   }
 
   void _submitResolution() async {
+    if (!_isFalseAlarm) {
+      if (_selectedCategory == null) return;
+      if (_selectedCategory == 'Other' && _notesController.text.trim().isEmpty) return;
+    }
+
     if (_isFalseAlarm) {
       // Show confirmation dialog for False Alarm
       final confirm = await showDialog<bool>(
@@ -89,6 +95,7 @@ class _ResolutionScreenState extends ConsumerState<ResolutionScreen> {
       _isFalseAlarm,
       _notesController.text,
       _photosBase64,
+      _selectedCategory,
     );
 
     // Clear the note provider
@@ -239,6 +246,27 @@ class _ResolutionScreenState extends ConsumerState<ResolutionScreen> {
               Text('What was the outcome?', style: Theme.of(context).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.bold)),
               const SizedBox(height: 16),
 
+              if (!_isFalseAlarm) ...[
+                DropdownButtonFormField<String>(
+                  value: _selectedCategory,
+                  decoration: InputDecoration(
+                    labelText: 'Incident Category',
+                    filled: true,
+                    fillColor: surfaceColor,
+                    border: OutlineInputBorder(borderRadius: BorderRadius.circular(6), borderSide: BorderSide(color: borderColor)),
+                  ),
+                  items: ['Road Accident', 'Medical Emergency', 'Fire', 'Assault', 'Other'].map((String category) {
+                    return DropdownMenuItem(value: category, child: Text(category, style: TextStyle(color: textColor)));
+                  }).toList(),
+                  onChanged: (value) {
+                    setState(() {
+                      _selectedCategory = value;
+                    });
+                  },
+                ),
+                const SizedBox(height: 16),
+              ],
+
               // MARK RESOLVED Button
               InkWell(
                 onTap: () {
@@ -381,7 +409,9 @@ class _ResolutionScreenState extends ConsumerState<ResolutionScreen> {
                 label: 'SUBMIT RESOLUTION',
                 isLoading: _isSubmitting,
                 isDanger: _isFalseAlarm,
-                onPressed: _submitResolution,
+                onPressed: (_isFalseAlarm || (_selectedCategory != null && (_selectedCategory != 'Other' || _notesController.text.trim().isNotEmpty))) 
+                           ? _submitResolution 
+                           : null,
               ),
             ],
           ),

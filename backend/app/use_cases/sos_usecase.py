@@ -13,11 +13,17 @@ class SOSUseCase:
         if device_id:
             recent_alert = await self.repo.get_recent_alert_by_device(device_id)
             if recent_alert:
-                return {
-                    "status": "received", "alert_id": recent_alert.id,
-                    "message": "SOS already active. Officers are being dispatched.",
-                    "nearest_emergency": "112", "action": "WAIT"
-                }
+                if recent_alert.status in ["resolved", "cancelled", "false_alarm", "cancelled_by_police", "cancelled_by_citizen"]:
+                    return {
+                        "error": "Cooldown active. Please wait 5 minutes before raising another alert.",
+                        "status_code": 429
+                    }
+                else:
+                    return {
+                        "status": "received", "alert_id": recent_alert.id,
+                        "message": "SOS already active. Officers are being dispatched.",
+                        "nearest_emergency": "112", "action": "WAIT"
+                    }
 
         active_alerts = await self.repo.get_active_nearby_alerts(lat, lng)
         for alert in active_alerts:
@@ -57,6 +63,9 @@ class SOSUseCase:
                     "severity": a.severity, "status": a.status, "message": a.message,
                     "alerted_at": str(a.alerted_at), "cancellation_reason": a.cancellation_reason,
                     "cancellation_details": a.cancellation_details, "cancelled_by": a.cancelled_by,
+                    "requires_manual_dispatch": a.requires_manual_dispatch, "category": a.category,
+                    "citizen_name": a.citizen_name, "citizen_phone": a.citizen_phone,
+                    "closure_notes": a.closure_notes, "closure_photo_urls": a.closure_photo_urls or []
                 }
                 for a in alerts
             ]
@@ -120,11 +129,31 @@ class SOSUseCase:
         if not alert: return {"error": "Alert not found", "status_code": 404}
         if alert.status not in ["active", "cancelled", "cancelled_by_citizen"]:
             return {"error": f"Alert {alert_id} is already {alert.status}", "status_code": 400}
-        alert.status = "cancelled_by_citizen"
-        alert.cancellation_reason = reason or "user_cancelled"
-        alert.cancelled_by = "citizen"
-        alert.resolved_at = func.now()
-        await self.repo.log_event("SOS_CANCELLED_BY_CITIZEN", {"alert_id": alert_id, "reason": alert.cancellation_reason})
+            
+        if reason == "false_alarm_grace_period":
+            alert.status = "false_alarm"
+            alert.cancellation_reason = "citizen_grace_period"
+            alert.cancelled_by = "citizen"
+            alert.resolved_at = func.now()
+            await self.repo.log_event("SOS_CANCELLED_FALSE_ALARM", {"alert_id": alert_id, "reason": reason})
+            
+            if alert.accepted_officer_id:
+                from app.utils.websocket_manager import manager
+                import asyncio
+                asyncio.create_task(manager.send_personal_message({"type": "ALERT_CANCELLED_FALSE_ALARM"}, alert.accepted_officer_id))
+        else:
+            alert.status = "cancelled_by_citizen"
+            alert.cancellation_reason = reason or "user_cancelled"
+            alert.cancelled_by = "citizen"
+            alert.resolved_at = func.now()
+            await self.repo.log_event("SOS_CANCELLED_BY_CITIZEN", {"alert_id": alert_id, "reason": alert.cancellation_reason})
+            
+            if alert.accepted_officer_id:
+                from app.utils.websocket_manager import manager
+                import asyncio
+                asyncio.create_task(manager.send_personal_message({"type": "DISPATCH_CANCELLED"}, alert.accepted_officer_id))
+
+        await self.repo.flush()
         return {"status": "ok", "alert_id": alert_id, "message": "SOS cancelled."}
 
     async def police_cancel_alert(self, alert_id: int, reason: str, details: str):
@@ -175,12 +204,13 @@ class SOSUseCase:
         if self.dispatch_trigger: await self.dispatch_trigger(alert.id, self.repo.session)
         return {"status": "ok", "message": "Location updated and re-dispatched"}
 
-    async def close_incident(self, alert_id: int, notes: str, photos: list, background_tasks):
+    async def close_incident(self, alert_id: int, notes: str, photos: list, category: str, background_tasks):
         alert = await self.repo.get_alert(alert_id)
         if not alert: return {"error": "Alert not found", "status_code": 404}
         alert.status = "resolved"
         alert.resolved_at = func.now()
         if notes: alert.closure_notes = notes
+        if category: alert.category = category
         
         if photos:
             from app.utils.database import AsyncSessionLocal
