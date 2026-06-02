@@ -35,7 +35,10 @@ const GlassCard = ({ children, style = {} }) => (
   </div>
 );
 
-export function LeftPanel() {
+export function LeftPanel({ pastSos = [], pastReports = [] }) {
+  const resolvedCount = pastSos.length + pastReports.length;
+  const falseAlarms = pastSos.filter(s => s.data?.status === 'false_alarm').length + 
+                      pastReports.filter(r => r.data?.status === 'false_alarm').length;
   return (
     <div style={{
       width: 'var(--left-panel-width)',
@@ -74,18 +77,20 @@ export function LeftPanel() {
 
       <Divider />
 
-      <SectionLabel text="RESPONSE ZONES" />
+      <SectionLabel text="DAILY METRICS" />
       <GlassCard>
-        {/* TODO: Connect to zone API */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontFamily: 'DM Sans, sans-serif', fontSize: '12px', color: 'var(--text-secondary)' }}>
-            <span style={{ fontSize: '10px' }}>🟢</span> Zone Alpha — Clear
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontFamily: 'DM Sans, sans-serif', fontSize: '12px', color: 'var(--text-secondary)' }}>
+            <span>Resolved Incidents</span>
+            <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{resolvedCount}</span>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontFamily: 'DM Sans, sans-serif', fontSize: '12px', color: 'var(--text-secondary)' }}>
-            <span style={{ fontSize: '10px' }}>🟡</span> Zone Bravo — Moderate
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontFamily: 'DM Sans, sans-serif', fontSize: '12px', color: 'var(--text-secondary)' }}>
+            <span>False Alarms</span>
+            <span style={{ color: 'var(--text-primary)', fontWeight: 600 }}>{falseAlarms}</span>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontFamily: 'DM Sans, sans-serif', fontSize: '12px', color: 'var(--text-secondary)' }}>
-            <span style={{ fontSize: '10px' }}>🔴</span> Zone Charlie — High
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontFamily: 'DM Sans, sans-serif', fontSize: '12px', color: 'var(--text-secondary)' }}>
+            <span>Avg Response Time</span>
+            <span style={{ color: 'var(--accent-green)', fontWeight: 600 }}>{'< 3 min'}</span>
           </div>
         </div>
       </GlassCard>

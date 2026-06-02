@@ -39,7 +39,7 @@ export default function App() {
         totalReports={activeReports.length}
       />
       <div className="app-body">
-        <LeftPanel />
+        <LeftPanel pastSos={pastSos} pastReports={pastReports} />
         <MainCanvas
           activeSos={activeSos}
           activeReports={activeReports}
