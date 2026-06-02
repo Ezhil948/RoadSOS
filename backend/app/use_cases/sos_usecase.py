@@ -61,10 +61,11 @@ class SOSUseCase:
                 {
                     "id": a.id, "lat": a.latitude, "lng": a.longitude,
                     "severity": a.severity, "status": a.status, "message": a.message,
-                    "alerted_at": str(a.alerted_at), "cancellation_reason": a.cancellation_reason,
+                    "alerted_at": str(a.alerted_at) + "Z", "cancellation_reason": a.cancellation_reason,
                     "cancellation_details": a.cancellation_details, "cancelled_by": a.cancelled_by,
                     "requires_manual_dispatch": a.requires_manual_dispatch, "category": a.category,
                     "citizen_name": a.citizen_name, "citizen_phone": a.citizen_phone,
+                    "accepted_officer_id": a.accepted_officer_id,
                     "closure_notes": a.closure_notes, "closure_photo_urls": a.closure_photo_urls or []
                 }
                 for a in alerts

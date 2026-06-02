@@ -14,35 +14,18 @@
 }
 
 .incident-card::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  opacity: 0;
-  transition: opacity var(--transition-normal);
-  pointer-events: none;
-}
-
-.incident-card:hover::before {
-  opacity: 1;
+  content: none;
 }
 
 .incident-card--sos {
   border-left-color: var(--red-vivid);
   background: var(--red-fill);
   border-color: var(--red-border);
-  box-shadow: var(--shadow-red-card);
-  animation: sos-pulse 2.5s ease-in-out infinite;
-}
-
-.incident-card--sos::before {
-  background: radial-gradient(ellipse at top left, var(--red-glow-near) 0%, transparent 65%);
 }
 
 .incident-card--sos:hover {
   background: var(--red-fill-hover);
   transform: translateY(-2px);
-  box-shadow: var(--shadow-red-card), 0 8px 32px var(--red-glow-near);
-  animation: none;
 }
 
 .incident-card--report {
@@ -56,3 +39,4 @@
   background: var(--amber-fill-hover);
   transform: translateY(-2px);
 }
+

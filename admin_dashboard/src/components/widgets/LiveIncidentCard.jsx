@@ -25,6 +25,7 @@ export function LiveIncidentCard({ item, type, onClick }) {
   // Defensive data access
   const status = item?.status ?? 'UNKNOWN';
   const officerName = item?.assigned_officer_name ?? item?.officer_name;
+  const isDispatched = officerName || item?.accepted_officer_id;
   
   const name = item?.citizen_name 
             ?? item?.reporter_name 
@@ -58,7 +59,7 @@ export function LiveIncidentCard({ item, type, onClick }) {
             <span style={{ fontFamily: 'DM Sans, sans-serif', fontSize: '10px', fontWeight: 700, color: 'var(--accent-red)', letterSpacing: '0.06em', textTransform: 'uppercase', padding: '2px 6px', border: '1px solid var(--accent-red)', borderRadius: '4px' }}>
               MANUAL DISPATCH
             </span>
-          ) : officerName ? (
+          ) : isDispatched ? (
             <StatusBadge status="DISPATCHED" />
           ) : (
             <span style={{ fontFamily: 'DM Sans, sans-serif', fontSize: '10px', fontWeight: 600, color: 'var(--text-tertiary)', letterSpacing: '0.06em', textTransform: 'uppercase' }}>
