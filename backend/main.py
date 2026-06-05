@@ -241,7 +241,7 @@ app.add_middleware(
 )
 
 app.add_middleware(RateLimitMiddleware)
-app.add_middleware(RequestBodySizeLimitMiddleware)
+# app.add_middleware(RequestBodySizeLimitMiddleware)
 
 # ── Routers ────────────────────────────────────────────────
 _ROUTERS = [
