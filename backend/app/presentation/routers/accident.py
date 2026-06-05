@@ -1,5 +1,6 @@
 """Accident router — report submission and retrieval."""
 from fastapi import APIRouter, Depends, UploadFile, File, Form, HTTPException, BackgroundTasks
+from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.utils.database import get_db
 from app.models.schemas import StatusUpdate
@@ -25,21 +26,27 @@ async def report_accident(
     image: Optional[UploadFile] = File(None),
     db: AsyncSession = Depends(get_db),
 ):
-    file_bytes = None
-    filename = None
-    content_type = None
-    if image and image.filename:
-        file_bytes = await image.read()
-        if len(file_bytes) > _MAX_IMAGE_BYTES:
-            raise HTTPException(413, "Image exceeds 10 MB limit")
-        filename = image.filename
-        content_type = image.content_type
+    try:
+        repo = AccidentRepository(db)
+        use_case = AccidentUseCase(repo)
 
-    repo = AccidentRepository(db)
-    use_case = AccidentUseCase(repo)
-    return await use_case.submit_report(
-        background_tasks, latitude, longitude, severity, casualties, description, file_bytes, filename, content_type, citizen_name, citizen_phone
-    )
+        file_bytes = None
+        filename = None
+        content_type = None
+
+        if image is not None and image.filename != "":
+            file_bytes = await image.read()
+            if len(file_bytes) > _MAX_IMAGE_BYTES:
+                raise HTTPException(413, "Image exceeds 10 MB limit")
+            filename = image.filename
+            content_type = image.content_type
+
+        return await use_case.submit_report(
+            background_tasks, latitude, longitude, severity, casualties, description, file_bytes, filename, content_type, citizen_name, citizen_phone
+        )
+    except Exception as e:
+        import traceback
+        return JSONResponse(status_code=500, content={"detail": str(e), "traceback": traceback.format_exc()})
 
 @router.get("/reports", summary="List accident reports")
 async def list_reports(
