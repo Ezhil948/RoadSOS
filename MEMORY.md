@@ -60,6 +60,8 @@ RoadSOS/
   - Timestamp "5 hrs ago" timezone bug fixed — backend now appends `Z` to `alerted_at` so browsers correctly parse it as UTC instead of local IST time (which was 5.5 hrs off).
   - Police cancel alert was silently failing because the DB `status` column was a strict ENUM that did not include `cancelled_by_police` or `cancelled_by_citizen`. Fixed by migrating the column from `ENUM` to `VARCHAR(30)` on both the live Aiven DB and `main.py` startup migrations.
   - Dashboard UNASSIGNED badge showing even after officer accepted — fixed by adding `accepted_officer_id` to the `list_sos_alerts` API response and updating `LiveIncidentCard.jsx` to use `isDispatched = officerName || accepted_officer_id`.
+  - **Aiven SSL Verification Crash**: Fixed an issue where the production Render backend crashed on database connection because Render's system CA bundle didn't natively trust the Aiven database. Added a `CERT_NONE` fallback in `database.py`.
+  - **Proxy Rate Limit Bug**: Fixed an issue where Render's load balancer IP was triggering the brute-force security limit for all users simultaneously. `main.py` now extracts the real IP from the `x-forwarded-for` header.
 - **Repository Cleanup**: The unused E-commerce UI template folder has been completely moved out of the project repository to a backup location. The legacy `flutter_app/` (v1) was completely removed to avoid confusion with `flutter_app_v2`.
 - **Feature Deprecation**: The AI Accident Image Analysis feature (`/api/v1/ai/analyze`) and YOLOv8 integration have been completely removed from the backend, frontend (`flutter_app_v2`), and database schema (`ai_analysis_results` table dropped) per user request to streamline the application.
 ### 4.4 Operational Edge Case Overhaul
@@ -67,7 +69,7 @@ RoadSOS/
 - **Structured Officer Resolution**: Officers are required to categorize the incident upon resolution in the Officer App, and this is persisted and visible on the dashboard.
 - **Spam Prevention & Grace Periods**: A strict 5-minute cooldown is enforced for citizens after raising an alert. However, a 15-second grace period is provided allowing the citizen to cancel an alert as a "false alarm" without penalty.
 - **Real-time False Alarm Notifications**: Officer apps intercept `ALERT_CANCELLED_FALSE_ALARM` websocket events and automatically dismiss active dispatch screens with a false alarm dialog, avoiding unnecessary travel.
-- **v4.4 APKs**: Optimized ARM64 release builds for both the Citizen App (`citizen_app_4.4_arm64.apk`) and Police/Officer App (`police_app_4.4_arm64.apk`) have been generated and saved to `apk/4.4/`. The Police App APK was rebuilt after the WebSocket backgrounding fix.
+- **v4.6 APKs**: Optimized ARM64 release builds for both the Citizen App (`Citizen_v4.6.apk`) and Police/Officer App (`Officer_v4.6.apk`) have been generated and saved to `apk/v4.6/`.
 
 ### 4.5 SOS Resolution & UX Overhaul
 - **Officer App (`main_map_screen.dart`)**: Single cancel button replaced with distinct **MARK CLEAR** and **STAND DOWN** buttons, backed by new bottom sheets for selecting category/notes or reasons (False Alarm vs Cannot Respond).
@@ -141,7 +143,6 @@ A 27-finding audit was conducted across all four applications. **22 of 27 fixes 
 
 ## 6. Work In Progress & Next Steps
 - **SECURITY DEBT (BURNED SECRETS)**: The Aiven DB password and IMGBB API key were previously exposed in the git history. The user has been notified to manually rotate these secrets in their dashboards and update the Render environment variables. This is pending user action.
-- **Production .env**: Set real `JWT_SECRET`, `CORS_ORIGINS`, `DB_CA_CERT_PATH` for Render deployment.
-- **Create admin officer**: Insert an officer record with badge_number='admin' and a real password hash for dashboard login. (COMPLETED)
-- **Local Testing**: The user is currently setting up physical USB debugging to test the Citizen and Officer mobile apps directly on their device without compiling APKs or Web apps.
-- **End-to-End Testing**: Full integration test of JWT auth flow (login → token → dispatch → resolve).
+- **Production .env**: COMPLETED. `JWT_SECRET` successfully added to Render, preventing `500` errors on token issuance.
+- **Live Database Setup**: COMPLETED. The Aiven database has been successfully seeded with Officer `7777` (`admin`) by directly targeting the production host via `query_cloud_db.py`.
+- **Testing**: End-to-End testing of the Live APKs connected to the Vercel Frontend and Render Backend is currently in progress.

@@ -62,7 +62,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                 )
             self.auth_requests[client_ip].append(now)
 
-        elif path.startswith("/api/v1/sos/alert"):
+        elif path.startswith("/api/v1/sos/alert") and request.method == "POST":
             # Finding #8: SOS-specific rate limit — 3 alerts per 10 minutes per IP
             self.sos_requests[client_ip] = [t for t in self.sos_requests[client_ip] if now - t < 600]
             if len(self.sos_requests[client_ip]) >= 3:
