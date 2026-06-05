@@ -41,7 +41,12 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         if self._cleanup_task is None:
             self._cleanup_task = asyncio.create_task(self._periodic_cleanup())
 
-        client_ip = request.client.host if request.client else "unknown"
+        # Get real client IP from behind proxy (Render load balancer)
+        forwarded = request.headers.get("x-forwarded-for")
+        if forwarded:
+            client_ip = forwarded.split(",")[0].strip()
+        else:
+            client_ip = request.client.host if request.client else "unknown"
         path = request.url.path
         now = time.time()
 
