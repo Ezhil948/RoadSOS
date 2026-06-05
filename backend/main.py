@@ -223,7 +223,7 @@ app = FastAPI(
 # ── Finding #5: CORS lockdown — no more wildcard ──────────
 ALLOWED_ORIGINS = [
     origin.strip()
-    for origin in os.getenv("CORS_ORIGINS", "http://localhost:5173,http://localhost:3000").split(",")
+    for origin in os.getenv("CORS_ORIGINS", "http://localhost:5173,http://localhost:3000,https://roadsos-admin.vercel.app").split(",")
     if origin.strip()
 ]
 

@@ -16,7 +16,7 @@ export function AdminLogin({ onLogin }) {
     setError('');
 
     try {
-      const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
+      const API_BASE = import.meta.env.VITE_API_URL || 'https://roadsos-backend-htmk.onrender.com/api/v1';
       const res = await fetch(`${API_BASE}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

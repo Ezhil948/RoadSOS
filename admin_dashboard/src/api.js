@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000/api/v1';
+const API_BASE = import.meta.env.VITE_API_URL || 'https://roadsos-backend-htmk.onrender.com/api/v1';
 
 // Create a centralized Axios instance
 const apiClient = axios.create({
