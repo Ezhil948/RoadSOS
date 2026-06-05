@@ -21,7 +21,6 @@ class _ReportScreenState extends State<ReportScreen> {
   int _casualties = 0;
   File? _selectedImage;
   bool _submitting = false;
-  String? _aiAnalysis;
 
   final ImagePicker _picker = ImagePicker();
 
@@ -35,28 +34,6 @@ class _ReportScreenState extends State<ReportScreen> {
     final picked = await _picker.pickImage(source: ImageSource.camera, imageQuality: 70, maxWidth: 1280);
     if (picked != null) {
       setState(() => _selectedImage = File(picked.path));
-      await _analyzeImage(File(picked.path));
-    }
-  }
-
-  Future<void> _analyzeImage(File img) async {
-    setState(() => _aiAnalysis = 'Analyzing image...');
-    try {
-      final api = context.read<ApiService>();
-      final bytes = await img.readAsBytes();
-      final b64 = base64Encode(bytes);
-      final response = await api.analyzeAccidentImage(b64);
-      final severity = response['severity_estimate'] ?? 'unknown';
-      final objects = (response['detected_objects'] as List?)?.join(', ') ?? 'vehicles';
-      
-      setState(() {
-        _aiAnalysis = '✅ AI detected: $objects. Severity: $severity.\n${response['recommendations']?.first ?? ''}';
-        if (['minor', 'moderate', 'critical'].contains(severity.toString().toLowerCase())) {
-          _severity = severity.toString().toLowerCase();
-        }
-      });
-    } catch (e) {
-      setState(() => _aiAnalysis = 'AI analysis unavailable');
     }
   }
 
@@ -160,11 +137,6 @@ class _ReportScreenState extends State<ReportScreen> {
                         fit: StackFit.expand,
                         children: [
                           ClipRRect(borderRadius: BorderRadius.circular(14), child: Image.file(_selectedImage!, fit: BoxFit.cover)),
-                          if (_aiAnalysis == 'Analyzing image...')
-                            Container(
-                              color: Colors.black54,
-                              child: const Center(child: CircularProgressIndicator(color: AppTheme.accentAmber)),
-                            ),
                         ],
                       )
                     : const Column(
@@ -177,26 +149,6 @@ class _ReportScreenState extends State<ReportScreen> {
                       ),
               ),
             ),
-
-            if (_aiAnalysis != null && _aiAnalysis != 'Analyzing image...') ...[
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF0A2030),
-                  borderRadius: BorderRadius.circular(12),
-                  border: const Border(left: BorderSide(color: AppTheme.accentTeal, width: 3)),
-                ),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Icon(Icons.smart_toy_rounded, color: AppTheme.accentTeal),
-                    const SizedBox(width: 12),
-                    Expanded(child: Text(_aiAnalysis!, style: const TextStyle(fontSize: 13, color: AppTheme.textPrimary))),
-                  ],
-                ),
-              ),
-            ],
 
             const SizedBox(height: 24),
             const Text('Severity', style: TextStyle(fontWeight: FontWeight.w600)),

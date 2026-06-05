@@ -4,6 +4,26 @@ from sqlalchemy.sql import func
 from datetime import datetime, timezone, timedelta
 import json
 
+
+# ── Finding #24: Consistent UTC datetime formatting ──────
+def to_utc_iso(dt) -> str:
+    """Format a datetime as ISO 8601 UTC string with Z suffix."""
+    if dt is None:
+        return None
+    s = str(dt)
+    if not s.endswith("Z") and "+" not in s and "-" not in s[10:]:
+        s += "Z"
+    return s
+
+
+# ── Finding #11: Category validation allowlist ────────────
+VALID_CATEGORIES = {
+    "traffic_accident", "medical_emergency", "fire", "assault",
+    "robbery", "domestic_dispute", "vehicle_breakdown", "false_alarm",
+    "natural_disaster", "public_disturbance", "other",
+}
+
+
 class SOSUseCase:
     def __init__(self, repo: SOSRepository, dispatch_trigger_fn=None):
         self.repo = repo
@@ -53,7 +73,7 @@ class SOSUseCase:
         }
 
     async def list_sos_alerts(self, status: str = None, limit: int = 50):
-        await self.repo.cancel_timeout_alerts()
+        # Finding #26: cancel_timeout_alerts() moved to background task in main.py
         alerts = await self.repo.get_alerts(status, limit)
         return {
             "total": len(alerts),
@@ -61,7 +81,8 @@ class SOSUseCase:
                 {
                     "id": a.id, "lat": a.latitude, "lng": a.longitude,
                     "severity": a.severity, "status": a.status, "message": a.message,
-                    "alerted_at": str(a.alerted_at) + "Z", "cancellation_reason": a.cancellation_reason,
+                    "alerted_at": to_utc_iso(a.alerted_at),
+                    "cancellation_reason": a.cancellation_reason,
                     "cancellation_details": a.cancellation_details, "cancelled_by": a.cancelled_by,
                     "requires_manual_dispatch": a.requires_manual_dispatch, "category": a.category,
                     "citizen_name": a.citizen_name, "citizen_phone": a.citizen_phone,
@@ -141,7 +162,8 @@ class SOSUseCase:
         return {"status": "ok", "message": "Marked as false alarm. Device trust penalized."}
 
     async def cancel_sos_alert(self, alert_id: int, reason: str):
-        alert = await self.repo.get_alert(alert_id)
+        # Finding #14: Use SELECT FOR UPDATE to prevent race condition with officer acceptance
+        alert = await self.repo.get_alert_with_lock(alert_id)
         if not alert: return {"error": "Alert not found", "status_code": 404}
         if alert.status not in ["active", "cancelled", "cancelled_by_citizen"]:
             return {"error": f"Alert {alert_id} is already {alert.status}", "status_code": 400}
@@ -153,10 +175,14 @@ class SOSUseCase:
             alert.resolved_at = func.now()
             await self.repo.log_event("SOS_CANCELLED_FALSE_ALARM", {"alert_id": alert_id, "reason": reason})
             
+            # Finding #12: Use await instead of create_task — must complete within request lifecycle
             if alert.accepted_officer_id:
                 from app.utils.websocket_manager import manager
-                import asyncio
-                asyncio.create_task(manager.send_personal_message({"type": "ALERT_CANCELLED_FALSE_ALARM"}, alert.accepted_officer_id))
+                officer_id = alert.accepted_officer_id  # Capture before any session changes
+                try:
+                    await manager.send_personal_message({"type": "ALERT_CANCELLED_FALSE_ALARM"}, officer_id)
+                except Exception as e:
+                    print(f"WARNING: Failed to notify officer {officer_id} of false alarm: {e}")
         else:
             alert.status = "cancelled_by_citizen"
             alert.cancellation_reason = reason or "user_cancelled"
@@ -164,10 +190,14 @@ class SOSUseCase:
             alert.resolved_at = func.now()
             await self.repo.log_event("SOS_CANCELLED_BY_CITIZEN", {"alert_id": alert_id, "reason": alert.cancellation_reason})
             
+            # Finding #12: Use await instead of create_task
             if alert.accepted_officer_id:
                 from app.utils.websocket_manager import manager
-                import asyncio
-                asyncio.create_task(manager.send_personal_message({"type": "DISPATCH_CANCELLED"}, alert.accepted_officer_id))
+                officer_id = alert.accepted_officer_id
+                try:
+                    await manager.send_personal_message({"type": "DISPATCH_CANCELLED"}, officer_id)
+                except Exception as e:
+                    print(f"WARNING: Failed to notify officer {officer_id} of cancellation: {e}")
 
         await self.repo.flush()
         return {"status": "ok", "alert_id": alert_id, "message": "SOS cancelled."}
@@ -176,8 +206,8 @@ class SOSUseCase:
         alert = await self.repo.get_alert(alert_id)
         if not alert: return {"error": "Alert not found", "status_code": 404}
         alert.status = "cancelled_by_police"
-        alert.cancellation_reason = reason
-        alert.cancellation_details = details
+        alert.cancellation_reason = reason[:100] if reason else None  # Truncate
+        alert.cancellation_details = details[:1000] if details else None  # Truncate
         alert.cancelled_by = "police"
         alert.resolved_at = func.now()
         await self.repo.log_event("SOS_CANCELLED_BY_POLICE", {"alert_id": alert_id, "reason": reason})
@@ -223,10 +253,18 @@ class SOSUseCase:
     async def close_incident(self, alert_id: int, notes: str, photos: list, category: str, background_tasks):
         alert = await self.repo.get_alert(alert_id)
         if not alert: return {"error": "Alert not found", "status_code": 404}
+        
+        # Finding #11: Validate category against allowlist
+        if category and category.lower() not in VALID_CATEGORIES:
+            return {
+                "error": f"Invalid category. Must be one of: {', '.join(sorted(VALID_CATEGORIES))}",
+                "status_code": 400
+            }
+        
         alert.status = "resolved"
         alert.resolved_at = func.now()
-        if notes: alert.closure_notes = notes
-        if category: alert.category = category
+        if notes: alert.closure_notes = notes[:1000]  # Truncate to prevent payload bombs
+        if category: alert.category = category.lower()
         
         if photos:
             from app.utils.database import AsyncSessionLocal

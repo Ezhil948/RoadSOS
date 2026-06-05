@@ -61,6 +61,7 @@ RoadSOS/
   - Police cancel alert was silently failing because the DB `status` column was a strict ENUM that did not include `cancelled_by_police` or `cancelled_by_citizen`. Fixed by migrating the column from `ENUM` to `VARCHAR(30)` on both the live Aiven DB and `main.py` startup migrations.
   - Dashboard UNASSIGNED badge showing even after officer accepted — fixed by adding `accepted_officer_id` to the `list_sos_alerts` API response and updating `LiveIncidentCard.jsx` to use `isDispatched = officerName || accepted_officer_id`.
 - **Repository Cleanup**: The unused E-commerce UI template folder has been completely moved out of the project repository to a backup location. The legacy `flutter_app/` (v1) was completely removed to avoid confusion with `flutter_app_v2`.
+- **Feature Deprecation**: The AI Accident Image Analysis feature (`/api/v1/ai/analyze`) and YOLOv8 integration have been completely removed from the backend, frontend (`flutter_app_v2`), and database schema (`ai_analysis_results` table dropped) per user request to streamline the application.
 ### 4.4 Operational Edge Case Overhaul
 - **Manual Dispatch Fallback**: Unaccepted alerts after 60s are flagged for manual dispatch and displayed prominently on the Admin Dashboard.
 - **Structured Officer Resolution**: Officers are required to categorize the incident upon resolution in the Officer App, and this is persisted and visible on the dashboard.
@@ -74,7 +75,73 @@ RoadSOS/
 - **Admin Dashboard (`IncidentModal.jsx`)**: Shows False Alarm banners, Stand Down reasons, and enriched resolution sections.
 - **Backend (`sos_usecase.py`)**: `get_alert_status()` now provides full officer/resolution metadata even after case closure.
 
-## 5. Work In Progress & Next Steps
-- **Build v4.5 APKs**: Generate new APKs for both the Citizen App and Police App.
-- **End-to-End Testing**: Full integration test after APK deployment.
-- **Production Deployment Readiness**: Final environment variable configuration.
+## 5. Pre-Production Security & Performance Audit (v5.0)
+
+A 27-finding audit was conducted across all four applications. **22 of 27 fixes have been implemented.**
+
+### 5.1 COMPLETED — Critical Security Fixes (Backend)
+
+| # | Finding | Files Modified |
+|---|---------|----------------|
+| #1 | **JWT Authentication** — Full token-based auth. Login now returns `access_token`. All officer endpoints require `Bearer` token. | `security.py` (rewritten), `auth_usecase.py` (rewritten), `auth.py` (rewritten), `requirements.txt` (+PyJWT) |
+| #2 | **Officer Identity Spoofing** — All dispatch endpoints verify JWT `sub` claim matches URL `officer_id`. | `dispatch.py` (rewritten — all 5 endpoints have `Depends(get_current_officer)` + ID check) |
+| #3 | **WebSocket Auth Bypass** — WebSocket verifies JWT token query param BEFORE accepting connection. | `dispatch.py` (WS endpoint), `api_endpoints.dart` (passes token), `dispatch_provider.dart` (sends token) |
+| #4 | **Committed Secrets** — Removed hardcoded DB password default, added JWT_SECRET env var. | `database.py` (rewritten), `.env` (updated with JWT_SECRET, CORS_ORIGINS) |
+| #5 | **CORS Wildcard** — `allow_origins=["*"]` replaced with env-based `CORS_ORIGINS`. | `main.py` (rewritten) |
+| #6 | **SSL CERT_NONE** — Removed `check_hostname=False` and `verify_mode=ssl.CERT_NONE`. Uses CA cert or system bundle. | `database.py` (rewritten) |
+| #7 | **Password Backdoor** — Null password_hash now returns `False`, not a match against literal `"password"`. | `security.py` (rewritten) |
+
+### 5.2 COMPLETED — High Severity Fixes (Backend)
+
+| # | Finding | Files Modified |
+|---|---------|----------------|
+| #8 | **SOS Rate Limiting** — 3 alerts per 10 minutes per IP, separate from general rate limit. | `main.py` (new `sos_requests` dict) |
+| #9 | **Rate Limiter Memory Leak** — Periodic cleanup task prunes stale IPs every 5 minutes. | `main.py` (`_periodic_cleanup` coroutine) |
+| #11 | **Category Validation** — Allowlist of 11 valid categories. Notes truncated to 1000 chars. | `sos_usecase.py` (`VALID_CATEGORIES` set) |
+| #12 | **Fire-and-Forget WebSocket** — All `asyncio.create_task(manager.send_personal_message(...))` replaced with `await` + try/except. | `sos_usecase.py`, `dispatch_usecase.py` (both rewritten) |
+| #13 | **Status Enum Crash** — `SOSAlert.status` changed from `Enum(AlertStatusEnum)` to `String(30)`. | `db_models.py` |
+| #14 | **Cancel Race Condition** — `cancel_sos_alert()` now uses `get_alert_with_lock()` (SELECT FOR UPDATE). | `sos_repository.py` (new method), `sos_usecase.py` |
+| #20 | **Officer Composite Index** — `idx_officer_dispatch_lookup(status, latitude, longitude)` added. | `db_models.py` (`__table_args__`), `main.py` (migration) |
+| #24 | **Datetime UTC** — `to_utc_iso()` helper applied to all datetime serialization. | `sos_usecase.py`, `accident_usecase.py` |
+| #26 | **Timeout Cleanup** — Moved from per-poll to background task running every 30s. | `main.py` (`_alert_cleanup_loop`) |
+
+### 5.3 COMPLETED — Flutter App Fixes
+
+| # | Finding | Files Modified |
+|---|---------|----------------|
+| #15 | **Citizen PII Storage** — SharedPreferences → FlutterSecureStorage (AES-256 via Android Keystore / iOS Keychain) | `pubspec.yaml` (+flutter_secure_storage), `auth_service.dart` (rewritten) |
+| #16 | **Officer Token Storage** — Hive → FlutterSecureStorage for JWT. QueuedInterceptorsWrapper for async reads. | `pubspec.yaml` (+flutter_secure_storage), `api_client.dart` (rewritten), `login_screen.dart` (+saveAccessToken), `profile_screen.dart` (+clearAccessToken), `dispatch_provider.dart` (getAccessToken for WS) |
+| #17 | **Hive.openBox → Hive.box** — Eliminated redundant disk I/O on every 5s poll. 8 occurrences fixed. | `sos_button.dart`, `emergency_repository_impl.dart`, `api_service.dart` |
+| #18 | **Duplicate Polling** — HTTP poll only runs when WebSocket is disconnected (`_wsAlive` flag). | `dispatch_provider.dart` |
+| #19 | **Siren Stop** — `_audioPlayer.stop()` added in 7 cancel/reject/miss/false-alarm paths. | `dispatch_provider.dart` |
+
+### 5.4 COMPLETED — Admin Dashboard Fixes
+
+| # | Finding | Files Modified |
+|---|---------|----------------|
+| #10 | **Dashboard Auth Gate** — Login screen blocks access. Token sent as Bearer header. Auto-logout on 401. Logout button in TopCommandBar. | `AdminLogin.jsx` (new), `App.jsx` (rewritten), `api.js` (rewritten), `TopCommandBar.jsx` (+onLogout+LogOut icon) |
+| #21 | **isDispatched Truthiness** — Explicit `null`/`undefined`/`""` checks instead of loose `||`. | `LiveIncidentCard.jsx` |
+| #22 | **Re-render Optimization** — `JSON.stringify` equality check prevents state update on unchanged data. | `useDashboardData.js` |
+| #25 | **Error Boundary** — Wraps MainCanvas and AlertFeed. Crash shows retry button instead of white screen. | `ErrorBoundary.jsx` (new), `App.jsx` |
+
+### 5.5 DEFERRED — Not Implementing Now
+
+| # | Finding | Risk | Reason |
+|---|---------|------|--------|
+| #23 | **SOS Button State Dedup** — 800-line widget duplicates EmergencyProvider logic | Low | Major refactor of working code. No security or correctness impact. |
+| #27 | **Hardcoded API URL** — Use `--dart-define` compile-time flag | Low | URL is already public-facing. No security impact. |
+
+### 5.6 Audit Score: **25 of 27 findings fixed (93%)**
+- **7/7 CRITICAL** — All resolved
+- **8/8 HIGH (Backend)** — All resolved
+- **5/5 HIGH (Flutter)** — All resolved
+- **4/4 MEDIUM (Dashboard)** — All resolved
+- **1/1 MEDIUM (Backend)** — Resolved
+- **2/2 LOW** — Intentionally deferred
+
+## 6. Work In Progress & Next Steps
+- **Secret Rotation**: Rotate the IMGBB API key and DB password (current ones are burned from git history).
+- **Production .env**: Set real `JWT_SECRET`, `CORS_ORIGINS`, `DB_CA_CERT_PATH` for Render deployment.
+- **Create admin officer**: Insert an officer record with badge_number='admin' and a real password hash for dashboard login.
+- **End-to-End Testing**: Full integration test of JWT auth flow (login → token → dispatch → resolve).
+

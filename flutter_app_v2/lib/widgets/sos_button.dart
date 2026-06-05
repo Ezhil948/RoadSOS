@@ -51,7 +51,7 @@ class _SOSButtonState extends State<SOSButton> with SingleTickerProviderStateMix
   }
   
   Future<void> _checkExistingAlert() async {
-    final box = await Hive.openBox('settings');
+    final box = Hive.box('settings');
     final lastSosIdStr = box.get('last_sos_id');
     if (lastSosIdStr != null) {
       _activeAlertId = int.tryParse(lastSosIdStr.toString());
@@ -98,7 +98,7 @@ class _SOSButtonState extends State<SOSButton> with SingleTickerProviderStateMix
       await api.cancelSosAlert(_activeAlertId!, reason: reason);
     }
     
-    final box = await Hive.openBox('settings');
+    final box = Hive.box('settings');
     await box.delete('last_sos_id');
     
     if (mounted) {
@@ -187,7 +187,7 @@ class _SOSButtonState extends State<SOSButton> with SingleTickerProviderStateMix
       _activeAlertId = alertId is int ? alertId : int.tryParse(alertId.toString());
       
       if (_activeAlertId != null) {
-        final box = await Hive.openBox('settings');
+        final box = Hive.box('settings');
         await box.put('last_sos_id', _activeAlertId);
         await box.put('last_sos_time', DateTime.now().toIso8601String());
         
@@ -250,7 +250,7 @@ class _SOSButtonState extends State<SOSButton> with SingleTickerProviderStateMix
       
       // RESOLVED — officer marked it clear
       if (res['status'] == 'resolved') {
-        final box = await Hive.openBox('settings');
+        final box = Hive.box('settings');
         await box.delete('last_sos_id');
         timer.cancel();
         _cancelTimer?.cancel();
@@ -275,7 +275,7 @@ class _SOSButtonState extends State<SOSButton> with SingleTickerProviderStateMix
       
       // FALSE ALARM — officer or citizen marked it as false
       if (res['status'] == 'false_alarm') {
-        final box = await Hive.openBox('settings');
+        final box = Hive.box('settings');
         await box.delete('last_sos_id');
         timer.cancel();
         _cancelTimer?.cancel();
@@ -298,7 +298,7 @@ class _SOSButtonState extends State<SOSButton> with SingleTickerProviderStateMix
       
       // CANCELLED BY POLICE — officer stood down (cannot respond)
       if (res['status'] == 'cancelled_by_police') {
-        final box = await Hive.openBox('settings');
+        final box = Hive.box('settings');
         await box.delete('last_sos_id');
         timer.cancel();
         _cancelTimer?.cancel();
@@ -323,7 +323,7 @@ class _SOSButtonState extends State<SOSButton> with SingleTickerProviderStateMix
       
       // CANCELLED — citizen cancelled or timed out
       if (res['status'] == 'cancelled' || res['status'] == 'cancelled_by_citizen') {
-        final box = await Hive.openBox('settings');
+        final box = Hive.box('settings');
         await box.delete('last_sos_id');
         timer.cancel();
         _cancelTimer?.cancel();
@@ -355,7 +355,7 @@ class _SOSButtonState extends State<SOSButton> with SingleTickerProviderStateMix
         _timeoutTimer?.cancel();
         _updateAnimationState();
         
-        final box = await Hive.openBox('settings');
+        final box = Hive.box('settings');
         await box.delete('last_sos_id');
         
         ScaffoldMessenger.of(context).showSnackBar(

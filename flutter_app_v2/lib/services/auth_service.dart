@@ -1,8 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
+/// Finding #15: Citizen PII (name, phone) stored in encrypted storage
+/// instead of plaintext SharedPreferences.
 class AuthService extends ChangeNotifier {
+  // FlutterSecureStorage uses Android Keystore / iOS Keychain
+  static const _secureStorage = FlutterSecureStorage(
+    aOptions: AndroidOptions(encryptedSharedPreferences: true),
+  );
+
   bool _isAuthenticated = false;
   String _citizenName = '';
   String _citizenPhone = '';
@@ -16,17 +23,15 @@ class AuthService extends ChangeNotifier {
   }
 
   Future<void> _checkAuth() async {
-    final prefs = await SharedPreferences.getInstance();
-    _citizenName = prefs.getString('citizen_name') ?? '';
-    _citizenPhone = prefs.getString('citizen_phone') ?? '';
+    _citizenName = await _secureStorage.read(key: 'citizen_name') ?? '';
+    _citizenPhone = await _secureStorage.read(key: 'citizen_phone') ?? '';
     _isAuthenticated = FirebaseAuth.instance.currentUser != null && _citizenName.isNotEmpty;
     notifyListeners();
   }
 
   Future<void> completeVerification(String name, String phone) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString('citizen_name', name);
-    await prefs.setString('citizen_phone', phone);
+    await _secureStorage.write(key: 'citizen_name', value: name);
+    await _secureStorage.write(key: 'citizen_phone', value: phone);
     _citizenName = name;
     _citizenPhone = phone;
     _isAuthenticated = true;
@@ -35,9 +40,8 @@ class AuthService extends ChangeNotifier {
 
   Future<void> logout() async {
     await FirebaseAuth.instance.signOut();
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.remove('citizen_name');
-    await prefs.remove('citizen_phone');
+    await _secureStorage.delete(key: 'citizen_name');
+    await _secureStorage.delete(key: 'citizen_phone');
     _citizenName = '';
     _citizenPhone = '';
     _isAuthenticated = false;

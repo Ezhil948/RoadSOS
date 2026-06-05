@@ -101,8 +101,13 @@ class _ProfileScreenState extends ConsumerState<ProfileScreen> with SingleTicker
   }
 
   void _logout() async {
+    // Finding #16: Clear JWT from encrypted storage
+    await clearAccessToken();
+    // Also clear non-sensitive session data from Hive
     final box = Hive.box('settings');
-    await box.delete('access_token');
+    await box.delete('officer_id');
+    await box.delete('badge_number');
+    await box.delete('officer_name');
     if (mounted) {
       context.go('/login');
     }

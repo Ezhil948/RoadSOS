@@ -62,11 +62,14 @@ class DispatchUseCase:
             
             await self.repo.log_event("DISPATCH_ACCEPTED", {"alert_id": alert_id, "officer_id": officer_id})
             
+            # Finding #12: Use await instead of asyncio.create_task for WS notifications
             from app.utils.websocket_manager import manager
-            import asyncio
             for oid in pinged_officers:
                 if oid != officer_id:
-                    asyncio.create_task(manager.send_personal_message({"type": "DISPATCH_CANCELLED"}, oid))
+                    try:
+                        await manager.send_personal_message({"type": "DISPATCH_CANCELLED"}, oid)
+                    except Exception as e:
+                        print(f"WARNING: Failed to notify officer {oid} of dispatch taken: {e}")
                     
             return {"status": "accepted"}
             
@@ -116,10 +119,13 @@ class DispatchUseCase:
 
         alert.pinged_officer_ids = all_officer_ids
 
+        # Finding #12: Use await instead of asyncio.create_task for WS notifications
         from app.utils.websocket_manager import manager
-        import asyncio
         for oid in all_officer_ids:
-            asyncio.create_task(manager.send_personal_message({"type": "DISPATCH_INCOMING"}, oid))
+            try:
+                await manager.send_personal_message({"type": "DISPATCH_INCOMING"}, oid)
+            except Exception as e:
+                print(f"WARNING: Failed to notify officer {oid} of incoming dispatch: {e}")
 
         return {
             "status": "dispatched",

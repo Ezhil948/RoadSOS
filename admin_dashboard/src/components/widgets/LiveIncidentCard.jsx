@@ -25,7 +25,8 @@ export function LiveIncidentCard({ item, type, onClick }) {
   // Defensive data access
   const status = item?.status ?? 'UNKNOWN';
   const officerName = item?.assigned_officer_name ?? item?.officer_name;
-  const isDispatched = officerName || item?.accepted_officer_id;
+  const isDispatched = Boolean(officerName) || 
+    (item?.accepted_officer_id !== null && item?.accepted_officer_id !== undefined && item?.accepted_officer_id !== "");
   
   const name = item?.citizen_name 
             ?? item?.reporter_name 

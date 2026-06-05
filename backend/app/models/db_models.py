@@ -65,7 +65,7 @@ class SOSAlert(Base):
     severity = Column(Enum(SeverityEnum), default=SeverityEnum.critical)
     message = Column(Text, nullable=True)
     device_id = Column(String(100), nullable=True, index=True)
-    status = Column(Enum(AlertStatusEnum), default=AlertStatusEnum.active, index=True)
+    status = Column(String(30), default="active", index=True)  # Finding #13: VARCHAR to match DB migration
     alert_type = Column(String(50), default="citizen_sos")
     alerted_at = Column(DateTime(timezone=True), server_default=func.now(), index=True)
     resolved_at = Column(DateTime(timezone=True), nullable=True)
@@ -131,7 +131,6 @@ class AccidentReport(Base):
 
     # Relationships
     sos_alerts = relationship("SOSAlert", back_populates="accident_report", foreign_keys="SOSAlert.accident_report_id")
-    ai_result = relationship("AIAnalysisResult", back_populates="accident_report", uselist=False)
 
     __table_args__ = (
         Index("idx_accident_location", "latitude", "longitude"),
@@ -140,27 +139,6 @@ class AccidentReport(Base):
     def __repr__(self) -> str:
         return f"<AccidentReport id={self.id} severity={self.severity} status={self.status}>"
 
-
-# ── 3. AI Analysis Results ─────────────────────────────────
-class AIAnalysisResult(Base):
-    __tablename__ = "ai_analysis_results"
-
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    accident_report_id = Column(Integer, ForeignKey("accident_reports.id"), nullable=True, unique=True)
-    detected_objects = Column(Text, nullable=True)      # JSON string
-    severity_estimate = Column(String(50), nullable=True)
-    confidence_score = Column(Float, nullable=True)
-    vehicles_count = Column(SmallInteger, default=0)
-    persons_detected = Column(Boolean, default=False)
-    recommendations = Column(Text, nullable=True)       # JSON string
-    model_used = Column(String(100), default="yolov8n")
-    analyzed_at = Column(DateTime(timezone=True), server_default=func.now())
-
-    # Relationship
-    accident_report = relationship("AccidentReport", back_populates="ai_result")
-
-    def __repr__(self) -> str:
-        return f"<AIAnalysisResult id={self.id} severity={self.severity_estimate}>"
 
 
 # ── 4. Cached Services (OSM data) ──────────────────────────
@@ -255,12 +233,17 @@ class Officer(Base):
     id = Column(Integer, primary_key=True, autoincrement=True)
     name = Column(String(100), nullable=False)
     badge_number = Column(String(50), unique=True, nullable=False)
-    password_hash = Column(String(255), nullable=True)  # None = accept any (MVP)
+    password_hash = Column(String(255), nullable=True)
     phone = Column(String(20), nullable=True)
     latitude = Column(Float, nullable=True)
     longitude = Column(Float, nullable=True)
     status = Column(Enum(OfficerStatusEnum), default=OfficerStatusEnum.offline, index=True)
     last_ping_at = Column(DateTime(timezone=True), onupdate=func.now())
+
+    # Finding #20: Composite index for nearest-officer dispatch query
+    __table_args__ = (
+        Index("idx_officer_dispatch_lookup", "status", "latitude", "longitude"),
+    )
 
     def __repr__(self) -> str:
         return f"<Officer id={self.id} badge={self.badge_number} status={self.status}>"

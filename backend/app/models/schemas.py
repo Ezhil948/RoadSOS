@@ -62,11 +62,3 @@ class DispatchResponse(BaseModel):
     action: str  # "accept" or "reject"
 
 
-# ── AI Analysis ────────────────────────────────────────────
-class AnalysisResult(BaseModel):
-    detected_objects: List[str]
-    severity_estimate: str
-    confidence: float
-    recommendations: List[str]
-    vehicles_count: int
-    persons_detected: bool

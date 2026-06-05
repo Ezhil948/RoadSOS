@@ -20,7 +20,13 @@ export function useDashboardData(pollingIntervalMs = 10000) {
   const refreshData = useCallback(async () => {
     try {
       const result = await fetchUseCase.execute();
-      setData(result);
+      // Finding #22: Only update state if data actually changed — prevents unnecessary re-renders
+      setData(prev => {
+        const prevStr = JSON.stringify(prev);
+        const newStr = JSON.stringify(result);
+        if (prevStr === newStr) return prev; // Same reference = no re-render
+        return result;
+      });
       setError(null);
     } catch (e) {
       setError(e.message);

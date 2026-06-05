@@ -26,3 +26,9 @@ apk/
 *.exe
 google-services.json
 
+# Backend utility scripts with credentials (never commit)
+backend/fix_db.py
+backend/fix_status_enum.py
+backend/query_cloud_db.py
+backend/test_json.py
+backend/alter_db_remove_ai.py

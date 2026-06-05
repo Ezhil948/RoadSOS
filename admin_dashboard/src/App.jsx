@@ -5,10 +5,35 @@ import { LeftPanel } from './components/layout/LeftPanel';
 import { MainCanvas } from './components/layout/MainCanvas';
 import { AlertFeed } from './components/layout/AlertFeed';
 import { IncidentModal } from './components/overlays/IncidentModal';
+import { ErrorBoundary } from './components/ErrorBoundary';
+import { AdminLogin } from './components/AdminLogin';
 import './styles/tokens.css';
 import './index.css';
 
 export default function App() {
+  // Finding #10: Auth gate — check if admin token exists
+  const [isAuthenticated, setIsAuthenticated] = useState(() => {
+    return Boolean(sessionStorage.getItem('admin_token'));
+  });
+
+  const handleLogin = (token) => {
+    setIsAuthenticated(true);
+  };
+
+  const handleLogout = () => {
+    sessionStorage.removeItem('admin_token');
+    setIsAuthenticated(false);
+  };
+
+  // Show login screen if not authenticated
+  if (!isAuthenticated) {
+    return <AdminLogin onLogin={handleLogin} />;
+  }
+
+  return <AuthenticatedApp onLogout={handleLogout} />;
+}
+
+function AuthenticatedApp({ onLogout }) {
   const { activeSos, pastSos, activeReports, pastReports, isLoading, error, refreshData } = useDashboardData(10000);
   const [selectedIncident, setSelectedIncident] = useState(null);
 
@@ -37,19 +62,25 @@ export default function App() {
         totalActive={activeSos.length + activeReports.length}
         totalSos={activeSos.length}
         totalReports={activeReports.length}
+        onLogout={onLogout}
       />
       <div className="app-body">
         <LeftPanel pastSos={pastSos} pastReports={pastReports} />
-        <MainCanvas
-          activeSos={activeSos}
-          activeReports={activeReports}
-          onCardClick={handleCardClick}
-        />
-        <AlertFeed
-          pastSos={pastSos}
-          pastReports={pastReports}
-          onItemClick={handleCardClick}
-        />
+        {/* Finding #25: Error Boundary wraps data-driven components */}
+        <ErrorBoundary>
+          <MainCanvas
+            activeSos={activeSos}
+            activeReports={activeReports}
+            onCardClick={handleCardClick}
+          />
+        </ErrorBoundary>
+        <ErrorBoundary>
+          <AlertFeed
+            pastSos={pastSos}
+            pastReports={pastReports}
+            onItemClick={handleCardClick}
+          />
+        </ErrorBoundary>
       </div>
       {selectedIncident && (
         <IncidentModal

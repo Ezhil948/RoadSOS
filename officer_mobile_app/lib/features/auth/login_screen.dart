@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hive_flutter/hive_flutter.dart';
 import '../../core/network/api_endpoints.dart';
+import '../../core/network/api_client.dart';
 import '../../core/theme/app_theme.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -112,6 +113,11 @@ class _LoginScreenState extends State<LoginScreen>
         await box.put('officer_id', data['officer_id']);
         await box.put('badge_number', data['badge_number']);
         await box.put('officer_name', data['name']);
+        
+        // Finding #16: Save JWT token to encrypted storage, not Hive
+        if (data['access_token'] != null) {
+          await saveAccessToken(data['access_token']);
+        }
         
         if (mounted) {
           context.go('/');

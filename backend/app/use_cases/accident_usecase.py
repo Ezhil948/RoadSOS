@@ -1,6 +1,7 @@
 from app.infrastructure.repositories.accident_repository import AccidentRepository
 from app.presentation.routers.dispatch import trigger_dispatch_internal
 from app.models.db_models import AccidentStatusEnum
+from app.use_cases.sos_usecase import to_utc_iso
 import httpx
 import json
 import os
@@ -74,7 +75,7 @@ class AccidentUseCase:
                     "severity": r.severity,
                     "casualties": r.casualties,
                     "status": r.status,
-                    "reported_at": str(r.reported_at),
+                    "reported_at": to_utc_iso(r.reported_at),
                 }
                 for r in reports
             ],
@@ -93,7 +94,7 @@ class AccidentUseCase:
             "description": report.description,
             "image_path": report.image_path,
             "status": report.status,
-            "reported_at": str(report.reported_at),
+            "reported_at": to_utc_iso(report.reported_at),
         }
 
     async def update_report_status(self, report_id: int, status: str):

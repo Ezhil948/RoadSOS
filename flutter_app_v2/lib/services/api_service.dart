@@ -117,7 +117,7 @@ class ApiService extends ChangeNotifier {
     String? citizenPhone,
   }) async {
     try {
-      final box = await Hive.openBox('settings');
+      final box = Hive.box('settings');
       String deviceId = box.get('device_id', defaultValue: '');
       if (deviceId.isEmpty) {
         deviceId = 'citizen_${DateTime.now().millisecondsSinceEpoch}';
@@ -142,7 +142,7 @@ class ApiService extends ChangeNotifier {
 
   Future<Map<String, dynamic>> updateAlertLocation(int alertId, double lat, double lng) async {
     try {
-      final box = await Hive.openBox('settings');
+      final box = Hive.box('settings');
       String deviceId = box.get('device_id', defaultValue: '');
       final response = await _dio.post('/api/v1/sos/alerts/$alertId/location-update', data: {
         'new_lat': lat,
@@ -201,14 +201,5 @@ class ApiService extends ChangeNotifier {
     }
   }
   
-  Future<Map<String, dynamic>> analyzeAccidentImage(String base64Image) async {
-    try {
-      final response = await _dio.post(ApiConstants.analyzeImageEndpoint, data: {
-        'image_base64': base64Image,
-      });
-      return response.data;
-    } catch (e) {
-      return _handleError(e);
-    }
-  }
+
 }

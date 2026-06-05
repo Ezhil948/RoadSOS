@@ -11,10 +11,24 @@ const apiClient = axios.create({
   },
 });
 
-// Centralized error interceptor
+// Finding #10: Add auth token to all outgoing requests
+apiClient.interceptors.request.use((config) => {
+  const token = sessionStorage.getItem('admin_token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
+// Centralized error interceptor with auth redirect
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
+    // Finding #10: Auto-logout on 401 — token expired or invalid
+    if (error.response?.status === 401) {
+      sessionStorage.removeItem('admin_token');
+      window.location.reload(); // Force re-render to show login screen
+    }
     console.error('[API Error]:', error.response?.data?.detail || error.message);
     return Promise.reject(error);
   }
@@ -65,4 +79,3 @@ export const api = {
     }
   }
 };
-

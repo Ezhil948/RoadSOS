@@ -33,7 +33,6 @@ class Arrived extends OfficerStatus {      // resolve/false alarm
 
 class DispatchPollingNotifier extends StateNotifier<OfficerStatus> {
   final Ref ref;
-  Timer? _timer; // No longer used for periodic, but keeping for compatibility or we can remove
   bool _isPolling = false;
   int _failCount = 0;
   final AudioPlayer _audioPlayer = AudioPlayer();
@@ -41,6 +40,8 @@ class DispatchPollingNotifier extends StateNotifier<OfficerStatus> {
   Position? _currentPosition;
   StreamSubscription<Position>? _positionStreamSub;
   WebSocketChannel? _wsChannel;
+  // Finding #18: Track WebSocket health to avoid duplicate polling
+  bool _wsAlive = false;
 
   // Officer ID from Hive auth state (fallback to 1 for dev)
   int get _officerId => Hive.box('settings').get('officer_id', defaultValue: 1);
@@ -65,17 +66,23 @@ class DispatchPollingNotifier extends StateNotifier<OfficerStatus> {
     _connectWebSocket();
   }
 
-  void _connectWebSocket() {
+  Future<void> _connectWebSocket() async {
     _wsChannel?.sink.close();
-    final wsUrl = ApiEndpoints.wsDispatch(_officerId);
+    _wsAlive = false; // Finding #18: Reset on reconnect
+    
+    // Finding #3 + #16: Read JWT from encrypted storage for WebSocket auth
+    final token = await getAccessToken();
+    final wsUrl = ApiEndpoints.wsDispatch(_officerId, token: token);
     _wsChannel = WebSocketChannel.connect(Uri.parse(wsUrl));
     _wsChannel?.stream.listen((message) {
+      _wsAlive = true; // Finding #18: WebSocket is alive
       if (message is String) {
         try {
           final data = jsonDecode(message);
           if (data['type'] == 'DISPATCH_INCOMING' || data['type'] == 'DISPATCH_CANCELLED') {
             _fetchDispatch();
           } else if (data['type'] == 'ALERT_CANCELLED_FALSE_ALARM') {
+            _audioPlayer.stop(); // Finding #19: Stop siren on false alarm
             state = Online();
             HapticFeedback.heavyImpact();
             ref.read(falseAlarmEventProvider.notifier).state = true;
@@ -83,8 +90,10 @@ class DispatchPollingNotifier extends StateNotifier<OfficerStatus> {
         } catch (_) {}
       }
     }, onError: (e) {
+      _wsAlive = false; // Finding #18
       print('WebSocket error: $e');
     }, onDone: () {
+      _wsAlive = false; // Finding #18
       print('WebSocket closed. Reconnecting...');
       if (_isPolling) {
         Future.delayed(const Duration(seconds: 5), _connectWebSocket);
@@ -107,6 +116,7 @@ class DispatchPollingNotifier extends StateNotifier<OfficerStatus> {
     _positionStreamSub = null;
     _wsChannel?.sink.close();
     _wsChannel = null;
+    _wsAlive = false;
     state = Offline();
     
     // Attempt to notify server
@@ -161,8 +171,10 @@ class DispatchPollingNotifier extends StateNotifier<OfficerStatus> {
         }
       }
       
-      // 3. Fallback: Always poll for dispatches in case WebSocket drops
-      await _fetchDispatch();
+      // Finding #18: Only poll via HTTP when WebSocket is disconnected
+      if (!_wsAlive) {
+        await _fetchDispatch();
+      }
       
       _failCount = 0;
     } catch (e) {
@@ -186,6 +198,7 @@ class DispatchPollingNotifier extends StateNotifier<OfficerStatus> {
       } else if (state is Navigating) {
         final currentDispatch = (state as Navigating).dispatch;
         if (res.data['has_dispatch'] == false) {
+          await _audioPlayer.stop(); // Finding #19: Stop siren
           state = Online();
           _onAlertCancelled(currentDispatch.alertId);
         } else if (res.data['has_dispatch'] == true) {
@@ -205,6 +218,7 @@ class DispatchPollingNotifier extends StateNotifier<OfficerStatus> {
           }
         }
       } else if (state is Dispatching && res.data['has_dispatch'] == false) {
+          await _audioPlayer.stop(); // Finding #19: Stop siren
           state = Online();
           HapticFeedback.vibrate();
       }
@@ -214,6 +228,7 @@ class DispatchPollingNotifier extends StateNotifier<OfficerStatus> {
   }
 
   void _onAlertCancelled(int alertId) {
+    _audioPlayer.stop(); // Finding #19: Ensure siren stops
     // Notify via haptic — actual UI SnackBar shown in home_screen listening to state
     HapticFeedback.mediumImpact();
     print("Alert #$alertId was cancelled by citizen. Returning to standby.");
@@ -228,6 +243,9 @@ class DispatchPollingNotifier extends StateNotifier<OfficerStatus> {
 
   Future<void> respondToDispatch(bool accept) async {
     if (state is! Dispatching) return;
+    
+    // Finding #19: Always stop siren when responding to a dispatch
+    await _audioPlayer.stop();
     
     final currentDispatch = (state as Dispatching).dispatch;
     try {
@@ -253,6 +271,9 @@ class DispatchPollingNotifier extends StateNotifier<OfficerStatus> {
 
   Future<void> missDispatch() async {
     if (state is! Dispatching) return;
+    
+    // Finding #19: Stop siren on miss
+    await _audioPlayer.stop();
     
     // In Uber model, we may not need to explicitly notify the backend of a miss, 
     // or we can send a 'miss' action so the backend knows this officer ignored it.
@@ -357,6 +378,7 @@ class DispatchPollingNotifier extends StateNotifier<OfficerStatus> {
         'reason': reason,
         if (details != null) 'details': details,
       });
+      await _audioPlayer.stop(); // Finding #19: Stop siren
       state = Online();
     } catch (e) {
       print("Failed to cancel dispatch: $e");

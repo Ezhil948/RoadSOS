@@ -58,20 +58,20 @@ class EmergencyRepositoryImpl implements IEmergencyRepository {
 
   @override
   Future<void> saveActiveAlertLocally(int alertId) async {
-    final box = await Hive.openBox('settings');
+    final box = Hive.box('settings');
     await box.put('last_sos_id', alertId);
     await box.put('last_sos_time', DateTime.now().toIso8601String());
   }
 
   @override
   Future<void> clearActiveAlertLocally() async {
-    final box = await Hive.openBox('settings');
+    final box = Hive.box('settings');
     await box.delete('last_sos_id');
   }
 
   @override
   Future<int?> getLocallySavedAlert() async {
-    final box = await Hive.openBox('settings');
+    final box = Hive.box('settings');
     final lastSosIdStr = box.get('last_sos_id');
     if (lastSosIdStr != null) {
       return int.tryParse(lastSosIdStr.toString());

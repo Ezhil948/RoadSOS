@@ -1,6 +1,5 @@
 """
 RoadSOS — MySQL Database Connection
-DB: roadsos_db | User: roadsos_admin | Pass: roadsos_pass
 Uses async SQLAlchemy 2.x + aiomysql driver
 """
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
@@ -11,11 +10,15 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+# Finding #4: No default fallback for sensitive credentials
 DB_HOST = os.getenv("DB_HOST", "localhost")
 DB_PORT = os.getenv("DB_PORT", "3306")
-DB_USER = os.getenv("DB_USER", "roadsos_admin")
-DB_PASSWORD = os.getenv("DB_PASSWORD", "roadsos_pass")
-DB_NAME = os.getenv("DB_NAME", "roadsos_db")
+DB_USER = os.getenv("DB_USER", "")
+DB_PASSWORD = os.getenv("DB_PASSWORD", "")
+DB_NAME = os.getenv("DB_NAME", "")
+
+if not DB_USER or not DB_NAME:
+    print("WARNING: DB_USER or DB_NAME not set in environment. Using empty defaults.")
 
 DATABASE_URL = (
     f"mysql+aiomysql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
@@ -25,12 +28,19 @@ DATABASE_URL = (
 _debug_mode = os.getenv("DEBUG", "false").lower() == "true"
 
 connect_args = {}
-# Only use SSL if connecting to a remote database (like Aiven)
+# Finding #6: Proper SSL for remote databases — no more CERT_NONE
 if "localhost" not in DB_HOST and "127.0.0.1" not in DB_HOST:
     import ssl
     ssl_context = ssl.create_default_context()
-    ssl_context.check_hostname = False
-    ssl_context.verify_mode = ssl.CERT_NONE
+    # Load Aiven CA cert if provided
+    ca_cert_path = os.getenv("DB_CA_CERT_PATH")
+    if ca_cert_path:
+        ssl_context.load_verify_locations(ca_cert_path)
+    else:
+        # If no CA cert path, still enforce verification against system CA bundle
+        # This is a SIGNIFICANT improvement over ssl.CERT_NONE
+        print("WARNING: DB_CA_CERT_PATH not set. Using system CA bundle for SSL verification.")
+    # DO NOT disable verification — no more check_hostname=False or CERT_NONE
     connect_args["ssl"] = ssl_context
 
 engine = create_async_engine(

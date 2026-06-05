@@ -104,6 +104,14 @@ class SOSRepository:
         result = await self.session.execute(select(SOSAlert).where(SOSAlert.id == alert_id))
         return result.scalar_one_or_none()
 
+    async def get_alert_with_lock(self, alert_id: int) -> SOSAlert:
+        """Finding #14: SELECT FOR UPDATE to prevent race conditions between
+        citizen cancel and officer acceptance."""
+        result = await self.session.execute(
+            select(SOSAlert).where(SOSAlert.id == alert_id).with_for_update()
+        )
+        return result.scalar_one_or_none()
+
     async def get_officer(self, officer_id: int) -> Officer:
         result = await self.session.execute(select(Officer).where(Officer.id == officer_id))
         return result.scalar_one_or_none()

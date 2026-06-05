@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { ShieldAlert, RotateCw } from 'lucide-react';
+import { ShieldAlert, RotateCw, LogOut } from 'lucide-react';
 import { StatChip } from '../widgets/StatChip';
 import { PulsingDot } from '../widgets/PulsingDot';
 
-export function TopCommandBar({ isLoading, error, refreshData, totalActive, totalSos, totalReports }) {
+export function TopCommandBar({ isLoading, error, refreshData, totalActive, totalSos, totalReports, onLogout }) {
   const [now, setNow] = useState(new Date());
 
   useEffect(() => {
@@ -99,6 +99,30 @@ export function TopCommandBar({ isLoading, error, refreshData, totalActive, tota
           }}>
             <RotateCw size={16} />
           </button>
+
+          {onLogout && (
+            <button onClick={onLogout} title="Logout" style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              padding: '6px 10px',
+              borderRadius: 'var(--radius-sm)',
+              border: '1px solid var(--border-default)',
+              color: 'var(--red-vivid)',
+              transition: 'all var(--transition-fast)',
+              cursor: 'pointer',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.borderColor = 'var(--red-vivid)';
+              e.currentTarget.style.background = 'rgba(255,45,85,0.08)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.borderColor = 'var(--border-default)';
+              e.currentTarget.style.background = 'transparent';
+            }}>
+              <LogOut size={16} />
+            </button>
+          )}
         </div>
       </div>
 
