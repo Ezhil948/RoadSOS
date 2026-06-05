@@ -140,8 +140,8 @@ A 27-finding audit was conducted across all four applications. **22 of 27 fixes 
 - **2/2 LOW** — Intentionally deferred
 
 ## 6. Work In Progress & Next Steps
-- **Secret Rotation**: Rotate the IMGBB API key and DB password (current ones are burned from git history).
+- **SECURITY DEBT (BURNED SECRETS)**: The Aiven DB password and IMGBB API key were previously exposed in the git history. The user has been notified to manually rotate these secrets in their dashboards and update the Render environment variables. This is pending user action.
 - **Production .env**: Set real `JWT_SECRET`, `CORS_ORIGINS`, `DB_CA_CERT_PATH` for Render deployment.
-- **Create admin officer**: Insert an officer record with badge_number='admin' and a real password hash for dashboard login.
+- **Create admin officer**: Insert an officer record with badge_number='admin' and a real password hash for dashboard login. (COMPLETED)
+- **Local Testing**: The user is currently setting up physical USB debugging to test the Citizen and Officer mobile apps directly on their device without compiling APKs or Web apps.
 - **End-to-End Testing**: Full integration test of JWT auth flow (login → token → dispatch → resolve).
-

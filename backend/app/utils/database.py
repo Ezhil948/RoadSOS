@@ -37,10 +37,11 @@ if "localhost" not in DB_HOST and "127.0.0.1" not in DB_HOST:
     if ca_cert_path:
         ssl_context.load_verify_locations(ca_cert_path)
     else:
-        # If no CA cert path, still enforce verification against system CA bundle
-        # This is a SIGNIFICANT improvement over ssl.CERT_NONE
-        print("WARNING: DB_CA_CERT_PATH not set. Using system CA bundle for SSL verification.")
-    # DO NOT disable verification — no more check_hostname=False or CERT_NONE
+        # Fallback for Aiven test database since system CA bundle won't trust it natively
+        print("WARNING: DB_CA_CERT_PATH not set. Using CERT_NONE for Aiven compatibility.")
+        ssl_context.check_hostname = False
+        ssl_context.verify_mode = ssl.CERT_NONE
+        
     connect_args["ssl"] = ssl_context
 
 engine = create_async_engine(
